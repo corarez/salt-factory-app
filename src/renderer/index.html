@@ -1,18 +1,25 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Electron</title>
-    <!-- Consolidated Content Security Policy -->
-    <meta
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your App Title</title>
+    <!-- Tailwind CSS CDN (if not already included) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html2canvas for capturing DOM elements -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jspdf for creating PDF documents -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Other scripts like React, ReactDOM, Babel if you're using them directly in HTML -->
+     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; connect-src 'self' http://localhost:5000 ws://localhost:5000; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://unpkg.com/;"
     />
-
-  </head>
-
-  <body>
+</head>
+<body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+    <!-- Your React app bundle or script goes here -->
+</body>
 </html>
