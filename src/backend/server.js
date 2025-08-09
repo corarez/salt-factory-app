@@ -1,39 +1,32 @@
-// server.js
-
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const sqlite3 = require('sqlite3').verbose();
-const bcrypt = require('bcryptjs'); // For password hashing
-const http = require('http'); // Required for Socket.IO
-const { Server } = require('socket.io'); // Import Server from socket.io
+const bcrypt = require('bcryptjs');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
 const PORT = 5000;
 
-// Create an HTTP server from the Express app
 const server = http.createServer(app);
 
-// Initialize Socket.IO server and attach it to the HTTP server
 const io = new Server(server, {
   cors: {
-    origin: "*", // Allow all origins for real-time communication
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"]
   }
 });
 
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
-// --- SQLite Database Setup ---
 const db = new sqlite3.Database('./salt_db.db', (err) => {
   if (err) {
     console.error('Error connecting to database:', err.message);
   } else {
     console.log('Connected to the SQLite database.');
     db.serialize(() => {
-      // Admins Table - Added for user management
       db.run(`CREATE TABLE IF NOT EXISTS admins (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         fullName TEXT NOT NULL,
@@ -44,7 +37,6 @@ const db = new sqlite3.Database('./salt_db.db', (err) => {
         if (err) {
           console.error("Error creating admins table:", err.message);
         } else {
-          // Check if default admin exists, if not, create it
           db.get("SELECT COUNT(*) AS count FROM admins WHERE username = ?", ["admin"], (err, row) => {
             if (err) {
               console.error("Error checking default admin:", err.message);
@@ -71,7 +63,6 @@ const db = new sqlite3.Database('./salt_db.db', (err) => {
         }
       });
 
-      // Existing tables
       db.run(`CREATE TABLE IF NOT EXISTS arrived (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         quantity REAL,
@@ -98,19 +89,19 @@ const db = new sqlite3.Database('./salt_db.db', (err) => {
         note TEXT
       )`);
 
-      // Updated 'sold' table schema to include new fields
       db.run(`CREATE TABLE IF NOT EXISTS sold (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         buyerName TEXT,
         invoiceId TEXT UNIQUE,
         date TEXT,
         items TEXT,
-        truckDriverName TEXT,    -- New field
-        truckNumber TEXT,        -- New field
-        truckDriverPhone TEXT,   -- New field
-        oldDebt REAL,            -- New field
-        total REAL               -- New field
-      )`); // items will be stored as a JSON string
+        truckDriverName TEXT,
+        truckNumber TEXT,
+        truckDriverPhone TEXT,
+        receiverName TEXT,
+        oldDebt REAL,
+        total REAL
+      )`);
 
       db.run(`CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -126,15 +117,11 @@ const db = new sqlite3.Database('./salt_db.db', (err) => {
   }
 });
 
-// Helper function to handle database errors
 const handleDbError = (res, err, message) => {
   console.error(message, err.message);
   res.status(500).json({ error: message, details: err.message });
 };
 
-// --- API Endpoints ---
-
-// Authentication Endpoint
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   db.get("SELECT * FROM admins WHERE username = ?", [username], (err, admin) => {
@@ -158,8 +145,6 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-
-// 1. Arrived Data Endpoints
 app.get('/api/arrived', (req, res) => {
   db.all("SELECT * FROM arrived", [], (err, rows) => {
     if (err) {
@@ -179,7 +164,7 @@ app.post('/api/arrived', (req, res) => {
         handleDbError(res, err, "Error adding arrived entry.");
       } else {
         const newEntry = { id: this.lastID, ...req.body };
-        io.emit('arrived:added', newEntry); // Emit real-time event
+        io.emit('arrived:added', newEntry);
         res.status(201).json(newEntry);
       }
     }
@@ -198,7 +183,7 @@ app.put('/api/arrived/:id', (req, res) => {
         res.status(404).json({ message: 'Arrived entry not found' });
       } else {
         const updatedEntry = { id: parseInt(id), ...req.body };
-        io.emit('arrived:updated', updatedEntry); // Emit real-time event
+        io.emit('arrived:updated', updatedEntry);
         res.json(updatedEntry);
       }
     }
@@ -213,13 +198,12 @@ app.delete('/api/arrived/:id', (req, res) => {
     } else if (this.changes === 0) {
       res.status(404).json({ message: 'Arrived entry not found' });
     } else {
-      io.emit('arrived:deleted', parseInt(id)); // Emit real-time event
+      io.emit('arrived:deleted', parseInt(id));
       res.status(204).send();
     }
   });
 });
 
-// 2. Produced Data Endpoints
 app.get('/api/produced', (req, res) => {
   db.all("SELECT * FROM produced", [], (err, rows) => {
     if (err) {
@@ -239,7 +223,7 @@ app.post('/api/produced', (req, res) => {
         handleDbError(res, err, "Error adding produced entry.");
       } else {
         const newEntry = { id: this.lastID, ...req.body };
-        io.emit('produced:added', newEntry); // Emit real-time event
+        io.emit('produced:added', newEntry);
         res.status(201).json(newEntry);
       }
     }
@@ -258,7 +242,7 @@ app.put('/api/produced/:id', (req, res) => {
         res.status(404).json({ message: 'Produced entry not found' });
       } else {
         const updatedEntry = { id: parseInt(id), ...req.body };
-        io.emit('produced:updated', updatedEntry); // Emit real-time event
+        io.emit('produced:updated', updatedEntry);
         res.json(updatedEntry);
       }
     }
@@ -273,13 +257,12 @@ app.delete('/api/produced/:id', (req, res) => {
     } else if (this.changes === 0) {
       res.status(404).json({ message: 'Produced entry not found' });
     } else {
-      io.emit('produced:deleted', parseInt(id)); // Emit real-time event
+      io.emit('produced:deleted', parseInt(id));
       res.status(204).send();
     }
   });
 });
 
-// 3. Sold Data Endpoints
 app.get('/api/sold', (req, res) => {
   db.all("SELECT * FROM sold", [], (err, rows) => {
     if (err) {
@@ -294,17 +277,28 @@ app.get('/api/sold', (req, res) => {
   });
 });
 
+app.get('/api/sold/invoice-ids', (req, res) => {
+  db.all("SELECT invoiceId FROM sold", [], (err, rows) => {
+    if (err) {
+      handleDbError(res, err, "Error retrieving invoice IDs.");
+    } else {
+      const invoiceIds = rows.map(row => row.invoiceId);
+      res.json(invoiceIds);
+    }
+  });
+});
+
 app.post('/api/sold', (req, res) => {
-  const { buyerName, invoiceId, date, items, truckDriverName, truckNumber, truckDriverPhone, oldDebt, total } = req.body;
+  const { buyerName, invoiceId, date, items, truckDriverName, truckNumber, truckDriverPhone, receiverName, oldDebt, total } = req.body;
   const itemsString = JSON.stringify(items);
-  db.run(`INSERT INTO sold (buyerName, invoiceId, date, items, truckDriverName, truckNumber, truckDriverPhone, oldDebt, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [buyerName, invoiceId, date, itemsString, truckDriverName, truckNumber, truckDriverPhone, oldDebt, total],
+  db.run(`INSERT INTO sold (buyerName, invoiceId, date, items, truckDriverName, truckNumber, truckDriverPhone, receiverName, oldDebt, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [buyerName, invoiceId, date, itemsString, truckDriverName, truckNumber, truckDriverPhone, receiverName, oldDebt, total],
     function(err) {
       if (err) {
         handleDbError(res, err, "Error adding sold entry.");
       } else {
         const newEntry = { id: this.lastID, ...req.body };
-        io.emit('sold:added', newEntry); // Emit real-time event
+        io.emit('sold:added', newEntry);
         res.status(201).json(newEntry);
       }
     }
@@ -313,10 +307,10 @@ app.post('/api/sold', (req, res) => {
 
 app.put('/api/sold/:id', (req, res) => {
   const { id } = req.params;
-  const { buyerName, invoiceId, date, items, truckDriverName, truckNumber, truckDriverPhone, oldDebt, total } = req.body;
+  const { buyerName, invoiceId, date, items, truckDriverName, truckNumber, truckDriverPhone, receiverName, oldDebt, total } = req.body;
   const itemsString = JSON.stringify(items);
-  db.run(`UPDATE sold SET buyerName = ?, invoiceId = ?, date = ?, items = ?, truckDriverName = ?, truckNumber = ?, truckDriverPhone = ?, oldDebt = ?, total = ? WHERE id = ?`,
-    [buyerName, invoiceId, date, itemsString, truckDriverName, truckNumber, truckDriverPhone, oldDebt, total, id],
+  db.run(`UPDATE sold SET buyerName = ?, invoiceId = ?, date = ?, items = ?, truckDriverName = ?, truckNumber = ?, truckDriverPhone = ?, receiverName = ?, oldDebt = ?, total = ? WHERE id = ?`,
+    [buyerName, invoiceId, date, itemsString, truckDriverName, truckNumber, truckDriverPhone, receiverName, oldDebt, total, id],
     function(err) {
       if (err) {
         handleDbError(res, err, "Error updating sold entry.");
@@ -324,7 +318,7 @@ app.put('/api/sold/:id', (req, res) => {
         res.status(404).json({ message: 'Sold entry not found' });
       } else {
         const updatedEntry = { id: parseInt(id), ...req.body };
-        io.emit('sold:updated', updatedEntry); // Emit real-time event
+        io.emit('sold:updated', updatedEntry);
         res.json(updatedEntry);
       }
     }
@@ -339,13 +333,12 @@ app.delete('/api/sold/:id', (req, res) => {
     } else if (this.changes === 0) {
       res.status(404).json({ message: 'Sold entry not found' });
     } else {
-      io.emit('sold:deleted', parseInt(id)); // Emit real-time event
+      io.emit('sold:deleted', parseInt(id));
       res.status(204).send();
     }
   });
 });
 
-// 4. Transactions (Spend/Earning) Data Endpoints
 app.get('/api/transactions', (req, res) => {
   db.all("SELECT * FROM transactions", [], (err, rows) => {
     if (err) {
@@ -365,7 +358,7 @@ app.post('/api/transactions', (req, res) => {
         handleDbError(res, err, "Error adding transaction entry.");
       } else {
         const newEntry = { id: this.lastID, ...req.body };
-        io.emit('transactions:added', newEntry); // Emit real-time event
+        io.emit('transactions:added', newEntry);
         res.status(201).json(newEntry);
       }
     }
@@ -384,7 +377,7 @@ app.put('/api/transactions/:id', (req, res) => {
         res.status(404).json({ message: 'Transaction entry not found' });
       } else {
         const updatedEntry = { id: parseInt(id), ...req.body };
-        io.emit('transactions:updated', updatedEntry); // Emit real-time event
+        io.emit('transactions:updated', updatedEntry);
         res.json(updatedEntry);
       }
     }
@@ -399,13 +392,12 @@ app.delete('/api/transactions/:id', (req, res) => {
     } else if (this.changes === 0) {
       res.status(404).json({ message: 'Transaction entry not found' });
     } else {
-      io.emit('transactions:deleted', parseInt(id)); // Emit real-time event
+      io.emit('transactions:deleted', parseInt(id));
       res.status(204).send();
     }
   });
 });
 
-// 5. Admins Data Endpoints
 app.get('/api/admins', (req, res) => {
   db.all("SELECT id, fullName, username, role FROM admins", [], (err, rows) => {
     if (err) {
@@ -432,7 +424,7 @@ app.post('/api/admins', (req, res) => {
           handleDbError(res, err, "Error adding admin entry.");
         } else {
           const newAdmin = { id: this.lastID, fullName, username, role };
-          io.emit('admins:added', newAdmin); // Emit real-time event
+          io.emit('admins:added', newAdmin);
           res.status(201).json(newAdmin);
         }
       }
@@ -455,7 +447,7 @@ app.put('/api/admins/:id', (req, res) => {
         res.status(404).json({ message: 'Admin entry not found' });
       } else {
         const updatedAdmin = { id: parseInt(id), fullName, username, role };
-        io.emit('admins:updated', updatedAdmin); // Emit real-time event
+        io.emit('admins:updated', updatedAdmin);
         res.json(updatedAdmin);
       }
     }
@@ -494,7 +486,7 @@ app.put('/api/admins/:id/password', (req, res) => {
             } else if (this.changes === 0) {
               res.status(404).json({ message: 'Admin not found for password update.' });
             } else {
-              io.emit('admins:passwordUpdated', { id: parseInt(id) }); // Emit real-time event
+              io.emit('admins:passwordUpdated', { id: parseInt(id) });
               res.json({ message: 'Password updated successfully.' });
             }
           }
@@ -504,7 +496,6 @@ app.put('/api/admins/:id/password', (req, res) => {
   });
 });
 
-
 app.delete('/api/admins/:id', (req, res) => {
   const { id } = req.params;
   db.run(`DELETE FROM admins WHERE id = ?`, id, function(err) {
@@ -513,14 +504,12 @@ app.delete('/api/admins/:id', (req, res) => {
     } else if (this.changes === 0) {
       res.status(404).json({ message: 'Admin entry not found' });
     } else {
-      io.emit('admins:deleted', parseInt(id)); // Emit real-time event
+      io.emit('admins:deleted', parseInt(id));
       res.status(204).send();
     }
   });
 });
 
-
-// Start the Server (listen on 'server' not 'app')
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
