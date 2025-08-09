@@ -298,7 +298,7 @@ app.post('/api/sold', (req, res) => {
         handleDbError(res, err, "Error adding sold entry.");
       } else {
         const newEntry = { id: this.lastID, ...req.body };
-        io.emit('sold:added', newEntry);
+        io.emit('sold-updated'); // Emit generic update event
         res.status(201).json(newEntry);
       }
     }
@@ -318,7 +318,7 @@ app.put('/api/sold/:id', (req, res) => {
         res.status(404).json({ message: 'Sold entry not found' });
       } else {
         const updatedEntry = { id: parseInt(id), ...req.body };
-        io.emit('sold:updated', updatedEntry);
+        io.emit('sold-updated'); // Emit generic update event
         res.json(updatedEntry);
       }
     }
@@ -333,9 +333,28 @@ app.delete('/api/sold/:id', (req, res) => {
     } else if (this.changes === 0) {
       res.status(404).json({ message: 'Sold entry not found' });
     } else {
-      io.emit('sold:deleted', parseInt(id));
+      io.emit('sold-updated'); // Emit generic update event
       res.status(204).send();
     }
+  });
+});
+
+app.get('/api/next-invoice-id', (req, res) => {
+  const invoiceIdPrefix = 'INV-';
+  db.get("SELECT invoiceId FROM sold ORDER BY id DESC LIMIT 1", [], (err, row) => {
+    if (err) {
+      return handleDbError(res, err, "Error retrieving last invoice ID.");
+    }
+
+    let nextInvoiceNumber = 1;
+    if (row && row.invoiceId) {
+      const lastInvoiceNumber = parseInt(row.invoiceId.replace(invoiceIdPrefix, ''));
+      if (!isNaN(lastInvoiceNumber)) {
+        nextInvoiceNumber = lastInvoiceNumber + 1;
+      }
+    }
+    const nextInvoiceId = `${invoiceIdPrefix}${String(nextInvoiceNumber).padStart(4, '0')}`;
+    res.json({ nextInvoiceId });
   });
 });
 

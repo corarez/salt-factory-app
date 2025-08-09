@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Printer, FileDown, ChevronDown, ChevronUp, Edit, Trash2, X, PlusCircle, CheckCircle, XCircle } from 'lucide-react';
 import { io } from 'socket.io-client';
-
+import logo from "./../../../../resources/logo.png"
 const API_BASE_URL = 'http://localhost:5000/api';
 const SOCKET_URL = 'http://localhost:5000';
 
@@ -16,7 +16,7 @@ const Toast = ({ message, type, onClose }) => {
 
   const config = {
     success: { bgColor: 'bg-green-500', icon: <CheckCircle size={20} />, title: 'سەرکەوتوو بوو!' },
-    error: { bgColor: 'bg-red-500', icon: <XCircle size={20} />, title: 'هەڵە ڕوویدا!' },
+    error: { bgColor: 'bg-red-500', icon: <XCircle size={20} />, title: 'هەڵە ڕووida!' },
     info: { bgColor: 'bg-blue-500', icon: <X size={20} />, title: 'زانیاری' },
   };
 
@@ -248,95 +248,328 @@ const generateInvoiceHtml = (invoiceData) => {
 
   return `
     <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <title>Invoice - ${invoiceData.invoiceId}</title>
-      <style>
-        * { box-sizing: border-box; font-family: 'Arial', sans-serif; margin: 0; padding: 0; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        body { padding: 30px; width: 210mm; height: 297mm; background: white; }
-        .header, .description, .sub-header, .signatures { display: flex; justify-content: space-between; align-items: center; }
-        .header { margin-bottom: 8px; }
-        .header .side { width: 30%; font-size: 14px; text-align: center; }
-        .header .logo { width: 100px; height: 100px; object-fit: contain; }
-        .description { font-size: 12px; margin-bottom: 16px; text-align: center; }
-        .sub-header { font-weight: bold; font-size: 14px; border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 5px 0; margin-bottom: 16px; }
-        .info { font-size: 14px; margin-bottom: 16px; }
-        .info p { margin-bottom: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-        table, th, td { border: 1px solid #000; }
-        th, td { padding: 8px; text-align: center; }
-        .table-footer { margin-bottom: 40px; width: 100%; border-collapse: collapse; }
-        .table-footer tr:first-child td { border-top: 1px solid #000; }
-        .table-footer td { text-align: right; padding: 6px 12px; font-weight: bold; border: none; }
-        .table-footer td:first-child { text-align: left; }
-        .signatures { position: absolute; bottom: 40px; left: 30px; right: 30px; font-size: 14px; text-align: center; width: calc(100% - 60px); }
-        .signatures .sig { width: 30%; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <div class="side">
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>فاتورة - ${invoiceData.invoiceId}</title>
+  <style>
+    /* General Styles & Body */
+    * {
+      box-sizing: border-box;
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #2c3e50; /* Darker text for readability */
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      padding: 40px;
+      width: 210mm; /* A4 width */
+      height: 297mm; /* A4 height */
+      background: #ffffff;
+      direction: rtl;
+      font-size: 14px;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh; /* Ensure body takes full viewport height for sticky footer */
+    }
+
+    .container {
+      width: 100%;
+      flex-grow: 1; /* Allows main content to expand */
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between; /* Pushes footer to bottom */
+    }
+
+    /* Header Section */
+    .invoice-header {
+      display: flex;
+      justify-content: space-between; /* Distributes items with space between */
+      align-items: center; /* Vertically aligns items */
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 4px solid #0056b3; /* Stronger border for impact */
+    }
+    .invoice-header .company-info {
+      flex: 1; /* Takes available space */
+      text-align: right;
+      padding-left: 20px; /* Space from logo */
+    }
+    .invoice-header .company-info h1 {
+      font-size: 32px;
+      color: #0056b3; /* Primary blue */
+      margin-bottom: 8px;
+      font-weight: 800; /* Extra bold for impact */
+    }
+    .invoice-header .company-info h2 {
+      font-size: 24px;
+      color: #0056b3;
+      margin-top: 15px;
+      font-weight: 700;
+    }
+    .invoice-header .company-info p {
+      font-size: 13px;
+      color: #555;
+      line-height: 1.4;
+      margin-top: 5px;
+    }
+    .invoice-header .logo-container {
+      text-align: left;
+      flex-shrink: 0; /* Prevent shrinking */
+      margin-right: 20px; /* Adjusted margin for RTL layout */
+      display: flex; /* Make logo-container a flex container */
+      flex-direction: column; /* Stack image and contact info vertically */
+      align-items: flex-start; /* Align contents to the start (left in RTL) */
+    }
+    .invoice-header .logo-container img {
+      width: 140px;
+      height: 140px;
+      object-fit: contain;
+      border: 4px solid #0056b3; /* Bold border */
+      padding: 10px;
+      border-radius: 50%; /* Circular logo */
+      background: #ecf0f1; /* Light grey background */
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1); /* Subtle shadow */
+      margin-bottom: 10px; /* Space between logo and numbers */
+    }
+    .contact-info {
+      display: flex; /* Make it a flex container */
+      flex-direction: column; /* Stack items vertically */
+      align-items: flex-start; /* Align items to the start (left in RTL) */
+      gap: 5px; /* Reduce gap between numbers for tighter look */
+      font-size: 14px;
+      font-weight: bold;
+      color: #0056b3;
+    }
+
+    /* Invoice Details Section (Card) */
+    .invoice-details {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #eaf2f8; /* Light blue background */
+      border-right: 4px solid #0056b3; /* Slightly thinner accent border */
+      padding: 15px 25px; /* Reduced padding */
+      margin-bottom: 25px; /* Reduced margin */
+      border-radius: 8px; /* Slightly rounded corners */
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Softer shadow */
+    }
+    .invoice-details h3 {
+      font-size: 18px; /* Slightly smaller font */
+      color: #0056b3;
+      font-weight: 700;
+    }
+    .invoice-details .info-group p {
+      font-weight: bold;
+      font-size: 14px; /* Slightly smaller font */
+      color: #333;
+    }
+    .invoice-details .info-group strong {
+      color: #0056b3;
+      font-weight: 800;
+    }
+
+    /* Table Styles */
+    table {
+      width: 100%;
+      border-collapse: collapse; /* Collapses borders as requested */
+      margin-bottom: 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* Soft shadow for table */
+    }
+    th, td {
+      border: 1px solid #cce0f0; /* Lighter border for clean look */
+      padding: 15px; /* Standard padding for table data */
+      text-align: center;
+    }
+    thead th {
+      background-color: #0056b3; /* Primary blue for header */
+      color: #fff;
+      font-weight: bold;
+      text-align: center;
+      padding: 0; /* No padding for th, as requested */
+      line-height: 2.8; /* Vertically centers text in collapsed header */
+      text-transform: uppercase;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+    }
+    tbody tr:nth-child(even) {
+      background-color: #f8fbfd; /* Very light alternative row color */
+    }
+    tbody td {
+      font-weight: 500;
+      color: #34495e;
+    }
+
+    /* Totals Box */
+    .totals-box {
+      width: 45%; /* Wider box for totals */
+      margin-right: 0;
+      margin-left: auto; /* Aligns to the left in RTL */
+      border: 3px solid #0056b3; /* Bold border */
+      border-radius: 12px; /* More rounded corners */
+      overflow: hidden;
+      margin-bottom: 40px;
+      background: #ffffff;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .totals-box p {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px 25px;
+      font-weight: bold;
+      border-bottom: 1px solid #e0e6eb; /* Lighter separator */
+      color: #34495e;
+    }
+    .totals-box p:last-child {
+      border-bottom: none;
+      background: #0056b3; /* Striking final total background */
+      color: #fff;
+      font-size: 18px;
+      font-weight: 900; /* Extra bold for total */
+    }
+    .totals-box p strong {
+      color: inherit; /* Inherit color from parent */
+    }
+
+    /* Driver Details (Card) */
+    .driver-details {
+      background: #eaf2f8; /* Matches invoice details background */
+      border-right: 4px solid #0056b3; /* Slightly thinner accent border */
+      padding: 15px 25px; /* Reduced padding */
+      margin-bottom: 50px; /* Reduced margin */
+      font-size: 14px; /* Slightly smaller font */
+      line-height: 1.8; /* Adjusted line height */
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Softer shadow */
+    }
+    .driver-details strong {
+      color: #0056b3;
+      font-weight: 700;
+    }
+
+    /* Signatures Section */
+    .signatures {
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+      padding-top: 25px;
+      border-top: 2px dashed #aab7c0; /* Dashed line for subtle separation */
+      margin-top: auto; /* Pushes signatures to the bottom of the container */
+    }
+    .signatures .sig-box {
+      width: 30%; /* Slightly wider signature boxes */
+      padding-top: 15px;
+    }
+    .signatures .sig-box p {
+      font-weight: bold;
+      color: #0056b3;
+      border-top: 1px solid #0056b3; /* Line above name */
+      padding-top: 8px;
+      font-size: 14px;
+    }
+
+    /* Print adjustments */
+    @media print {
+      body {
+        margin: 0;
+        box-shadow: none;
+        width: auto;
+        height: auto;
+      }
+      .signatures {
+        position: relative;
+        bottom: auto;
+        left: auto;
+        right: auto;
+        margin-top: 40px;
+        page-break-inside: avoid; /* Avoid breaking signatures across pages */
+      }
+      .container {
+        display: block; /* Remove flexbox behavior for print layout */
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="main-content">
+      <div class="invoice-header">
+        <div class="logo-container">
+          <img src="${window.location.origin}${logo}" alt="Company Logo" />
+          <div class="contact-info">
+            <span>٠٧٥٠ ٢٤٦ ٦٧٣٩</span>
+            <span>٠٧٧٠ ١٤٧ ١٨٣٨</span>
+            <span>٠٧٧٦ ٦٩١ ١١٩٨</span>
+          </div>
+        </div>
+        <div class="company-info">
+          <h1>معمل ملح سردم</h1>
+          <p>الأنتاج افضل نوعیه‌</p>
+          <p>الأعنوان / السلیمانیة / ناحیة التكیة / المنطقه‌ الصناعیة</p>
+          <br>
           <h2>كارگەی خوێی سەردەم</h2>
-          <p>بۆ بەرهەمهێنانی باشترین جۆری خوێی خۆراكی و پیشەسازی</p>
-          <p>ناونیشان / سلێمانی / ناجییەی تەكیە / ناوچەی پیشەسازی</p>
-        </div>
-        <div>
-          <img class="logo" src="https://placehold.co/100x100/E0E7FF/4338CA?text=Logo" alt="Company Logo" />
-        </div>
-        <div class="side" style="text-align: right;">
-          <h2>Invoice</h2>
-          <p>Date: ${invoiceData.date}</p>
-          <p>Invoice ID: ${invoiceData.invoiceId}</p>
+          <p>بۆ به‌رهه‌مهێنانی باشترین جۆری خوێی خۆراكی و پیشه‌سازی</p>
+          <p>ناونیشان / سلێمانی / ناجییه‌ی ته‌كیه‌ / ناوچه‌ی پیشه‌سازی</p>
         </div>
       </div>
-      <div class="description">
-        <div>
-          <strong>Buyer Details:</strong><br/>
-          Name: ${invoiceData.buyerName}<br/>
-          Truck Driver: ${invoiceData.truckDriverName}<br/>
-          Truck No: ${invoiceData.truckNumber}<br/>
-          Driver Phone: ${invoiceData.truckDriverPhone}<br/>
-          Receiver Name: ${invoiceData.receiverName || 'N/A'}
+  
+      <div class="invoice-details">
+        <div class="info-group">
+          <p><strong>:ناوی کڕیار</strong> ${invoiceData.buyerName}</p>
         </div>
-        <div>
-          <strong>Seller Details:</strong><br/>
-          Model Salt Factory<br/>
-          Sulaymaniyah, Iraq<br/>
-          Phone: 07701234567
+        <div class="info-group">
+          <p><strong>به‌روار :</strong> ${invoiceData.date}</p>
+          <p><strong>ژماره‌ی پسووله‌ :</strong> ${invoiceData.invoiceId}</p>
         </div>
       </div>
-      <div class="sub-header">
-        <div style="width: 100%; text-align: center;">Item Details</div>
-      </div>
+  
       <table>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Salt Type</th>
-            <th>Quantity (Tons)</th>
-            <th>Price/Ton</th>
-            <th>Amount (IQD)</th>
+            <th>ز</th>
+            <th>جۆری خوێ</th>
+            <th>بڕ (تۆن)</th>
+            <th>نرخی ته‌ن</th>
+            <th>كۆی گشتی</th>
           </tr>
         </thead>
-        <tbody>${itemsHtml}</tbody>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
       </table>
-      <table class="table-footer">
-        <tr>
-          <td>Total Invoice: ${formatNumberForDisplay(totalItemsPrice)} IQD</td>
-        </tr>
-        ${invoiceData.oldDebt > 0 ? `<tr><td>Old Debt: ${formatNumberForDisplay(oldDebtValue)} IQD</td></tr>` : ''}
-        <tr>
-          <td>Total Due: ${formatNumberForDisplay(totalDue)} IQD</td>
-        </tr>
-      </table>
-      <div class="signatures">
-        <div class="sig"><p>_______________________</p><p>Owner of Company</p></div>
-        <div class="sig"><p>_______________________</p><p>Receiver Signature</p></div>
-        <div class="sig"><p>_______________________</p><p>Accountant / Manager</p></div>
+  
+      <div class="totals-box">
+        <p><span>كۆی گشتی پسووله‌:</span> <strong>${formatNumberForDisplay(totalItemsPrice)} IQD</strong></p>
+        ${invoiceData.oldDebt > 0 ? `<p><span>قه‌رزی گۆن :</span> <strong>${formatNumberForDisplay(oldDebtValue)} IQD</strong></p>` : ''}
+        <p><span>كۆی گشتی:</span> <strong>${formatNumberForDisplay(totalDue)} IQD</strong></p>
       </div>
-    </body>
-    </html>
+  
+      <div class="driver-details">
+        <p><strong>ناوی شۆفێر:</strong> ${invoiceData.truckDriverName}</p>
+        <p><strong>ژماره‌ی شۆفێر:</strong> ${invoiceData.truckDriverPhone}</p>
+        <p><strong>ژماره‌ی بارهه‌ڵگر :</strong> ${invoiceData.truckNumber}</p>
+      </div>
+    </div>
+    
+    <div class="signatures">
+      <div class="sig-box">
+        <p>به‌رێوبه‌ر / ناوی به‌ڕێوبه‌ر</p>
+      </div>
+      <div class="sig-box">
+        <p>ب.كارگێڕی / سامان ممند شریف</p>
+      </div>
+      <div class="sig-box">
+        <p>وه‌رگر / ${invoiceData.receiverName || 'نیه‌'}</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
   `;
 };
 
@@ -371,7 +604,7 @@ const Sold = () => {
 
   const fetchNextInvoiceId = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/sold/next-invoice-id`);
+      const response = await fetch(`${API_BASE_URL}/next-invoice-id`);
       if (!response.ok) {
         throw new Error('Failed to fetch next invoice ID');
       }
@@ -388,6 +621,7 @@ const Sold = () => {
     fetchNextInvoiceId();
 
     const socket = io(SOCKET_URL);
+    // Listen for the generic 'sold-updated' event from the backend
     socket.on('sold-updated', () => {
       fetchsoldData();
       fetchNextInvoiceId();
@@ -455,13 +689,25 @@ const Sold = () => {
       return;
     }
 
-    // Fallback for web environment
+    // Fallback for web environment: Use an invisible iframe for printing
     if (type === 'print') {
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(invoiceHtml);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none'; // Make the iframe invisible
+      document.body.appendChild(iframe);
+      iframe.contentWindow.document.open();
+      iframe.contentWindow.document.write(invoiceHtml);
+      iframe.contentWindow.document.close();
+      
+      // Wait for the iframe's content to load before printing
+      iframe.onload = () => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        // Remove the iframe after a short delay to allow printing to initiate
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 500); 
+      };
+
     } else if (type === 'download') {
       const blob = new Blob([invoiceHtml], { type: 'text/html' });
       const url = URL.createObjectURL(blob);

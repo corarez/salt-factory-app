@@ -11,6 +11,7 @@ import LoginPage from "./pages/LoginPage";
 
 const AppContent = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,6 +26,7 @@ const AppContent = () => {
         setIsLoggedIn(false);
       }
     }
+    setLoading(false);
   }, []);
 
   const handleLoginSuccess = (userData) => {
@@ -38,22 +40,23 @@ const AppContent = () => {
     navigate('/login');
   };
 
+  if (loading) {
+    return <div>Loading...</div>; // or a spinner component
+  }
+
   return (
     <div dir="rtl" className="flex min-h-screen">
       {isLoggedIn && <Sidebar onLogout={handleLogout} />}
-
       <div className="flex-1 overflow-y-auto pb-6">
         <div className="p-0">
           <Routes>
             <Route path="/login" element={isLoggedIn ? <Navigate to="/" /> : <LoginPage onLoginSuccess={handleLoginSuccess} />} />
-
             <Route path="/" element={isLoggedIn ? <Arrived /> : <Navigate to="/login" />} />
             <Route path="/produced" element={isLoggedIn ? <Produced /> : <Navigate to="/login" />} />
             <Route path="/sold" element={isLoggedIn ? <Sold /> : <Navigate to="/login" />} />
             <Route path="/spend" element={isLoggedIn ? <Spend /> : <Navigate to="/login" />} />
             <Route path="/analytics" element={isLoggedIn ? <Analytics /> : <Navigate to="/login" />} />
             <Route path="/settings" element={isLoggedIn ? <SettingsPage /> : <Navigate to="/login" />} />
-
             <Route path="*" element={isLoggedIn ? <Navigate to="/" /> : <Navigate to="/login" />} />
           </Routes>
         </div>
@@ -61,6 +64,7 @@ const AppContent = () => {
     </div>
   );
 };
+
 
 export default function App() {
   return (
