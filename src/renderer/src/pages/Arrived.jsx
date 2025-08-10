@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, Trash2, Printer, Download, PlusCircle, X, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { Edit, Trash2, Printer, PlusCircle, X, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { io } from 'socket.io-client';
+import logo from "./../../../../resources/logo.png"
 
-const API_BASE_URL = 'http://localhost:5000/api';
-const SOCKET_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://192.168.100.210:5000/api';
+const SOCKET_URL = 'http://192.168.100.210:5000';
 
 const formatNumberForDisplay = (num) => {
   if (num === null || num === undefined || isNaN(num)) return '';
   const parsedNum = parseFloat(num);
-  if (parsedNum % 1 === 0) {
-    return parsedNum.toString();
-  }
-  return parsedNum.toFixed(2);
+  // Use 'en-US' locale for English formatting
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: parsedNum % 1 === 0 ? 0 : 2, // No decimals for whole numbers, 2 for others
+    maximumFractionDigits: 2
+  }).format(parsedNum);
 };
 
 const Toast = ({ message, type, onClose }) => {
@@ -157,10 +159,10 @@ const AddEditArrivalModal = ({ isOpen, onClose, initialData, onSave, currentUser
     const totalTonPrice = pricePerTon * quantity;
     const totalPrice = totalFee + totalTonPrice;
 
-    // Add 'INV-' prefix back before saving to backend if needed, or ensure backend handles raw number
-    const finalInvoiceId = formData.invoiceId; // Assuming backend will store it as a number or handle formatting
+    const finalInvoiceId = `INV-${String(formData.invoiceId).padStart(4, '0')}`;
+    const finalData = { ...formData, invoiceId: finalInvoiceId, totalFee, totalTonPrice, totalPrice };
 
-    onSave({ ...formData, invoiceId: finalInvoiceId, totalFee, totalTonPrice, totalPrice });
+    onSave(finalData);
     onClose();
   };
 
@@ -214,9 +216,9 @@ const AddEditArrivalModal = ({ isOpen, onClose, initialData, onSave, currentUser
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm bg-white text-right"
             >
-              <option value="Delivered">گەیشتوو</option>
-              <option value="In Progress">لە پێشڤەچووندا</option>
-              <option value="Pending">چاوەڕوانکراو</option>
+              <option value="Delivered">پاره‌ی دراوه‌</option>
+              <option value="In Progress">پاره‌ی نه‌دراوه‌</option>
+              <option value="Pending">هیتر</option>
             </select>
           </div>
           <div className="col-span-full">
@@ -304,6 +306,204 @@ const ViewArrivalModal = ({ isOpen, onClose, entry }) => {
       </div>
     </div>
   );
+};
+
+const generateArrivalHtml = (arrivalData) => {
+  return `
+   <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فاتورة - ${arrivalData.invoiceId}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Ubuntu', 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333; /* Darker gray for general text */
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        body {
+            position: relative;
+            padding: 15mm; /* More padding for cleaner edges */
+            width: 210mm;
+            height: 297mm; /* A4 height */
+            background: #ffffff;
+            direction: rtl;
+            font-size: 11pt; /* Standard print font size */
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            width: 100%;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .header h1 {
+            font-size: 20pt;
+            color: #0056b3; /* A slightly darker blue */
+            margin-bottom: 5px;
+        }
+        .header p {
+            font-size: 10pt;
+            color: #555;
+            margin-top: 2px;
+        }
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            font-size: 9pt;
+            color: #0056b3;
+            margin-top: 10px;
+        }
+        .contact-info span {
+            direction: ltr;
+            unicode-bidi: isolate;
+        }
+
+        .details-section {
+            margin-top: 20px;
+            margin-bottom: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            border-top: 1px solid #eee;
+        }
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 10pt;
+        }
+        .details-row span {
+            font-weight: bold;
+            color: #0056b3;
+        }
+        .details-row div {
+            flex: 1;
+            padding: 0 10px;
+        }
+        .details-row .right {
+            text-align: right;
+        }
+        .details-row .left {
+            text-align: left;
+        }
+
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #eee; /* Lighter borders */
+            font-size: 10pt;
+        }
+        thead th {
+            background-color: #f0f0f0; /* Light gray header */
+            color: #333;
+            font-weight: bold;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tfoot td {
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
+
+        @media print {
+            html, body {
+                height: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+            }
+            .container {
+                height: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="header">
+                <h1>معمل ملح سردم</h1>
+                <p>كارگەی خوێی سەردەم</p>
+                <p>بۆ به‌رهه‌مهێنانی باشترین جۆری خوێی خۆراكی و پیشه‌سازی</p>
+                <p>ناونیشان / سلێمانی / ناجییه‌ی ته‌كیه‌ / ناوچه‌ی پیشه‌سازی</p>
+                <div class="contact-info">
+                    <span>0770 157 7927</span>
+                    <span>0750 157 7927</span>
+                    <span>0770 147 1838</span>
+                </div>
+            </div>
+
+            <div class="details-section">
+                <div class="details-row">
+                    <div class="right"><span>ژمارەی وەسڵ:</span> ${arrivalData.invoiceId}</div>
+                    <div class="left"><span>بەروار:</span> ${arrivalData.arrivedDate}</div>
+                </div>
+                <div class="details-row">
+                    <div class="right"><span>ناوی نێرەر:</span> ${arrivalData.senderName}</div>
+                    <div class="left"><span>شۆفێری بارهەڵگر:</span> ${arrivalData.truckDriver}</div>
+                </div>
+                <div class="details-row">
+                    <div class="right"><span>شوێنی گەیشتن:</span> ${arrivalData.placeArrived}</div>
+                    <div class="left"><span>زیادکراوە لەلایەن:</span> ${arrivalData.addedBy}</div>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>بڕ (تەن)</th>
+                        <th>نرخ/تەن (IQD)</th>
+                        <th>کۆی نرخی تەن (IQD)</th>
+                        <th>کرێ/تەن (IQD)</th>
+                        <th>کۆی کرێ (IQD)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>${formatNumberForDisplay(arrivalData.quantity)}</td>
+                        <td>${formatNumberForDisplay(arrivalData.pricePerTon)}</td>
+                        <td>${formatNumberForDisplay(arrivalData.totalTonPrice)}</td>
+                        <td>${formatNumberForDisplay(arrivalData.feePerTon)}</td>
+                        <td>${formatNumberForDisplay(arrivalData.totalFee)}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" style="text-align: left;">کۆی گشتی نرخ:</td>
+                        <td>${formatNumberForDisplay(arrivalData.totalPrice)} IQD</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+  `;
 };
 
 const Arrived = () => {
@@ -439,18 +639,34 @@ const Arrived = () => {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = (entryId) => {
+    const entry = data.find(e => e.id === entryId);
+    if (!entry) {
+      showToast('تۆمارەکە نەدۆزرایەوە.', 'error');
+      return;
+    }
+    const invoiceHtml = generateArrivalHtml(entry);
 
-  const handleDownload = () => {
-    showToast('تایبەتمەندی داگرتن لەژێر گەشەپێداندایە. تکایە لە ئێستادا بژاردەی چاپکردن بەکاربهێنە.', 'info');
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    iframe.contentWindow.document.open();
+    iframe.contentWindow.document.write(invoiceHtml);
+    iframe.contentWindow.document.close();
+
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 500);
+    };
   };
 
   const filteredData = data.filter(
     (item) =>
       (item.placeArrived.toLowerCase().includes(search.toLowerCase()) ||
-      item.invoiceId.toString().includes(search.toLowerCase()) || // Search by number
+      item.invoiceId.toString().includes(search.toLowerCase()) ||
       item.truckDriver.toLowerCase().includes(search.toLowerCase()) ||
       item.senderName.toLowerCase().includes(search.toLowerCase()) ||
       item.status.toLowerCase().includes(search.toLowerCase())) &&
@@ -552,12 +768,7 @@ const Arrived = () => {
                     <Printer
                       size={18}
                       className="cursor-pointer text-gray-500 hover:text-purple-600 transition-colors"
-                      onClick={() => handlePrint()}
-                    />
-                    <Download
-                      size={18}
-                      className="cursor-pointer text-gray-500 hover:text-green-600 transition-colors"
-                      onClick={() => handleDownload()}
+                      onClick={() => handlePrint(item.id)}
                     />
                     <Trash2
                       size={18}
@@ -597,7 +808,7 @@ const Arrived = () => {
         onClose={() => { setShowDeleteConfirmModal(false); setDeletingEntryId(null); }}
         onConfirm={handleDeleteConfirm}
         title="پشتڕاستکردنەوەی سڕینەوە"
-        message={`دڵنیایت دەتەوێت تۆماری گەیشتن بۆ ژمارەی وەسڵ "${data.find(d => d.id === deletingEntryId)?.invoiceId || 'ئەم تۆمارە'}" بسڕیتەوە؟ ئەم کردارە ناتوانرێت هەڵبوەشێنرێتەوە.`}
+        message={`دڵنیایت دەتەوێت تۆماری گەیشتن بۆ ژمارەی وەسڵ "${data.find(d => d.id === deletingEntryId)?.invoiceId || 'ئەم تۆمارە'}" بسڕیتەوە؟ ئەم کردارە ناتوانرێت هەڵوەشێنرێتەوە.`}
       />
 
       <Toast

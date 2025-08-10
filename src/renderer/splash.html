@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Loading...</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden; /* Hide scrollbars */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #6dd5ed, #2193b0); /* Nice gradient background */
+            font-family: 'Inter', sans-serif;
+            color: #fff;
+            -webkit-app-region: drag; /* Allows dragging the frameless window */
+            position: relative;
+        }
+
+        .splash-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0; /* Start hidden */
+            transform: scale(0.5); /* Start small */
+            animation: fadeInScale 1.5s forwards cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .logo-container {
+            margin-bottom: 20px;
+            animation: bounceIn 1.0s ease-out forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+            transform: scale(0.5);
+        }
+
+        .logo {
+            width: 100px; /* Adjust size as needed */
+            height: 100px;
+            border-radius: 50%; /* Make it round */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .app-title {
+            font-size: 2.5em;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideInUp 1.0s ease-out forwards;
+            animation-delay: 0.5s;
+        }
+
+        .loading-text {
+            margin-top: 15px;
+            font-size: 1.1em;
+            opacity: 0;
+            animation: fadeIn 1.0s ease-out forwards;
+            animation-delay: 0.8s;
+        }
+
+        @keyframes fadeInScale {
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes bounceIn {
+            0%, 20%, 40%, 60%, 80%, 100% {
+                animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+            }
+            0% {
+                opacity: 0;
+                transform: scale3d(0.3, 0.3, 0.3);
+            }
+            20% {
+                transform: scale3d(1.1, 1.1, 1.1);
+            }
+            40% {
+                transform: scale3d(0.9, 0.9, 0.9);
+            }
+            60% {
+                opacity: 1;
+                transform: scale3d(1.03, 1.03, 1.03);
+            }
+            80% {
+                transform: scale3d(0.97, 0.97, 0.97);
+            }
+            100% {
+                opacity: 1;
+                transform: scale3d(1, 1, 1);
+            }
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Optional: Small animation for a subtle effect */
+        .loading-text::after {
+            content: '';
+            animation: ellipsis 1.5s infinite;
+        }
+
+        @keyframes ellipsis {
+            0% { content: ''; }
+            33% { content: '.'; }
+            66% { content: '..'; }
+            100% { content: '...'; }
+        }
+    </style>
+</head>
+<body>
+    <div class="splash-container">
+        <div class="logo-container">
+            <!-- Replace 'resources/logo.png' with the actual path to your logo -->
+            <!-- Use a placeholder image if you don't have a logo yet -->
+            <img src="../../resources/logo.png" alt="App Logo" class="logo" onerror="this.onerror=null; this.src='https://placehold.co/100x100/3498db/ffffff?text=Logo';">
+        </div>
+        <h1 class="app-title">Salt Factory App</h1>
+        <p class="loading-text">Loading Application</p>
+    </div>
+</body>
+</html>

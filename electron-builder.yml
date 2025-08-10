@@ -1,10 +1,14 @@
+# electron-builder.yml
 appId: com.electron.app
 productName: salt-factory
 directories:
   buildResources: build
 files:
+  - 'out/**' # This line ensures everything from the 'out' directory is included in the final package.
   - '!**/.vscode/*'
-  - '!src/*'
+  # The line below was excluding your 'src' directory, which might contain 'splash.html' before build,
+  # or generally was too restrictive. We are now relying on 'out/**' to include built assets.
+  # - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'

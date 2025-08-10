@@ -2,13 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Printer, FileDown, ChevronDown, ChevronUp, Edit, Trash2, X, PlusCircle, CheckCircle, XCircle } from 'lucide-react';
 import { io } from 'socket.io-client';
 import logo from "./../../../../resources/logo.png"
-const API_BASE_URL = 'http://localhost:5000/api';
-const SOCKET_URL = 'http://localhost:5000';
+
+
+const API_BASE_URL = 'http://192.168.100.210:5000/api';
+const SOCKET_URL = 'http://192.168.100.210:5000';
 
 const formatNumberForDisplay = (num) => {
   if (num === null || num === undefined || isNaN(num)) return '';
   const parsedNum = parseFloat(num);
-  return parsedNum % 1 === 0 ? parsedNum.toString() : parsedNum.toFixed(2);
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(parsedNum);
 };
 
 const Toast = ({ message, type, onClose }) => {
@@ -16,7 +18,7 @@ const Toast = ({ message, type, onClose }) => {
 
   const config = {
     success: { bgColor: 'bg-green-500', icon: <CheckCircle size={20} />, title: 'سەرکەوتوو بوو!' },
-    error: { bgColor: 'bg-red-500', icon: <XCircle size={20} />, title: 'هەڵە ڕووida!' },
+    error: { bgColor: 'bg-red-500', icon: <XCircle size={20} />, title: 'هەڵە ڕوویدا!' },
     info: { bgColor: 'bg-blue-500', icon: <X size={20} />, title: 'زانیاری' },
   };
 
@@ -31,7 +33,7 @@ const Toast = ({ message, type, onClose }) => {
       {icon}
       <div>
         <h3 className="font-bold text-lg">{title}</h3>
-        <p className="text-sm">{message}</p>
+        <p className="text-base">{message}</p>
       </div>
       <button onClick={onClose} className="mr-auto p-1 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors">
         <X size={20} />
@@ -123,7 +125,7 @@ const SaleEntryModal = ({ isOpen, onClose, initialData, onSave, nextInvoiceIdFor
 
     const totalItemsPrice = formData.items.reduce((total, item) => total + (parseFloat(item.quantity) || 0) * (parseFloat(item.pricePerTon) || 0), 0);
     const oldDebtValue = parseFloat(formData.oldDebt) || 0;
-    const finalTotal = totalItemsPrice + oldDebtValue;
+    const finalTotal = totalItemsPrice - oldDebtValue;
     const finalInvoiceId = `INV-${String(formData.invoiceId).padStart(4, '0')}`;
 
     onSave({ ...formData, invoiceId: finalInvoiceId, total: finalTotal });
@@ -174,7 +176,7 @@ const SaleEntryModal = ({ isOpen, onClose, initialData, onSave, nextInvoiceIdFor
             + زیادکردنی کاڵایەکی تر
           </button>
 
-          {error && <p className="text-red-500 text-sm mt-2 text-right">{error}</p>}
+          {error && <p className="text-red-500 text-base mt-2 text-right">{error}</p>}
 
           <div className="flex justify-end gap-4 mt-8">
             <button type="button" onClick={onClose} className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors shadow-sm">
@@ -192,7 +194,7 @@ const SaleEntryModal = ({ isOpen, onClose, initialData, onSave, nextInvoiceIdFor
 
 const InputField = ({ label, id, ...props }) => (
   <div>
-    <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+    <label htmlFor={id} className="block text-base font-medium text-gray-700 mb-1">{label}</label>
     <input
       id={id}
       className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-colors text-right ${props.readOnly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
@@ -203,9 +205,9 @@ const InputField = ({ label, id, ...props }) => (
 
 const ItemInputField = ({ label, ...props }) => (
   <div>
-    <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+    <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
     <input
-      className="w-full px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 text-right"
+      className="w-full px-3 py-1 border border-gray-300 rounded-md text-base focus:ring-blue-500 focus:border-blue-500 text-right"
       {...props}
     />
   </div>
@@ -217,7 +219,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
     <div dir="rtl" className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-8 relative text-center transform transition-all duration-300 scale-100 opacity-100">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">{title}</h2>
-        <p className="text-gray-700 mb-6">{message}</p>
+        <p className="text-gray-700 mb-6 text-base">{message}</p>
         <div className="flex justify-center gap-4">
           <button onClick={onClose} className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors shadow-sm">
             هەڵوەشاندنەوە
@@ -244,331 +246,341 @@ const generateInvoiceHtml = (invoiceData) => {
 
   const totalItemsPrice = invoiceData.items.reduce((total, item) => total + (parseFloat(item.quantity) || 0) * (parseFloat(item.pricePerTon) || 0), 0);
   const oldDebtValue = parseFloat(invoiceData.oldDebt) || 0;
-  const totalDue = totalItemsPrice + oldDebtValue;
-
+  const totalDue = totalItemsPrice - oldDebtValue;
   return `
-    <!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>فاتورة - ${invoiceData.invoiceId}</title>
-  <style>
-    /* General Styles & Body */
-    * {
-      box-sizing: border-box;
-      font-family: 'Arial', sans-serif;
-      margin: 0;
-      padding: 0;
-      color: #2c3e50; /* Darker text for readability */
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    body {
-      padding: 40px;
-      width: 210mm; /* A4 width */
-      height: 297mm; /* A4 height */
-      background: #ffffff;
-      direction: rtl;
-      font-size: 14px;
-      line-height: 1.6;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh; /* Ensure body takes full viewport height for sticky footer */
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فاتورة - ${invoiceData.invoiceId}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Removed @font-face rule for local font file as it may not be accessible in this environment. */
+        /* Relying on Google Fonts for Ubuntu via the <link> tag. */
 
-    .container {
-      width: 100%;
-      flex-grow: 1; /* Allows main content to expand */
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between; /* Pushes footer to bottom */
-    }
+        * {
+            box-sizing: border-box;
+            font-family: 'Ubuntu', 'Arial', sans-serif; /* Prioritize Ubuntu from Google Fonts, with Arial as fallback */
+            margin: 0;
+            padding: 0;
+            color: #2c3e50;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        body {
+            position: relative;
+            padding: 10px;
+            width: 210mm; /* Explicit A4 width */
+            height: 100vh; /* Set height to 100vh for display */
+            background: #ffffff;
+            direction: rtl;
+            font-size: 16px;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            width: 100%;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
 
-    /* Header Section */
-    .invoice-header {
-      display: flex;
-      justify-content: space-between; /* Distributes items with space between */
-      align-items: center; /* Vertically aligns items */
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 4px solid #0056b3; /* Stronger border for impact */
-    }
-    .invoice-header .company-info {
-      flex: 1; /* Takes available space */
-      text-align: right;
-      padding-left: 20px; /* Space from logo */
-    }
-    .invoice-header .company-info h1 {
-      font-size: 32px;
-      color: #0056b3; /* Primary blue */
-      margin-bottom: 8px;
-      font-weight: 800; /* Extra bold for impact */
-    }
-    .invoice-header .company-info h2 {
-      font-size: 24px;
-      color: #0056b3;
-      margin-top: 15px;
-      font-weight: 700;
-    }
-    .invoice-header .company-info p {
-      font-size: 13px;
-      color: #555;
-      line-height: 1.4;
-      margin-top: 5px;
-    }
-    .invoice-header .logo-container {
-      text-align: left;
-      flex-shrink: 0; /* Prevent shrinking */
-      margin-right: 20px; /* Adjusted margin for RTL layout */
-      display: flex; /* Make logo-container a flex container */
-      flex-direction: column; /* Stack image and contact info vertically */
-      align-items: flex-start; /* Align contents to the start (left in RTL) */
-    }
-    .invoice-header .logo-container img {
-      width: 140px;
-      height: 140px;
-      object-fit: contain;
-      border: 4px solid #0056b3; /* Bold border */
-      padding: 10px;
-      border-radius: 50%; /* Circular logo */
-      background: #ecf0f1; /* Light grey background */
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1); /* Subtle shadow */
-      margin-bottom: 10px; /* Space between logo and numbers */
-    }
-    .contact-info {
-      display: flex; /* Make it a flex container */
-      flex-direction: column; /* Stack items vertically */
-      align-items: flex-start; /* Align items to the start (left in RTL) */
-      gap: 5px; /* Reduce gap between numbers for tighter look */
-      font-size: 14px;
-      font-weight: bold;
-      color: #0056b3;
-    }
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 3px solid #007bff;
+        }
+        .header-section {
+            flex: 1;
+        }
+        .header-section.company-info-arabic {
+            text-align: right;
+            padding-right: 5px;
+        }
+        .header-section.company-info-kurdish {
+            text-align: left;
+            padding-left: 5px;
+        }
+        .header-section.logo-center {
+            text-align: center;
+            flex-shrink: 0;
+            padding: 0 10px;
+        }
+        .invoice-header h1 {
+            font-size: 28px;
+            color: #007bff;
+            margin-bottom: 5px;
+            font-weight: 800;
+        }
+        .invoice-header h2 {
+            font-size: 20px;
+            color: #007bff;
+            margin-top: 10px;
+            font-weight: 700;
+        }
+        .invoice-header p {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.4;
+            margin-top: 3px;
+        }
+        .header-section.logo-center img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            border: 3px solid #007bff;
+            padding: 5px;
+            border-radius: 50%;
+            background: rgba(0, 123, 255, 0.15);
+            box-shadow: 0 4px 10px rgba(0,0,0,.1);
+        }
 
-    /* Invoice Details Section (Card) */
-    .invoice-details {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #eaf2f8; /* Light blue background */
-      border-right: 4px solid #0056b3; /* Slightly thinner accent border */
-      padding: 15px 25px; /* Reduced padding */
-      margin-bottom: 25px; /* Reduced margin */
-      border-radius: 8px; /* Slightly rounded corners */
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Softer shadow */
-    }
-    .invoice-details h3 {
-      font-size: 18px; /* Slightly smaller font */
-      color: #0056b3;
-      font-weight: 700;
-    }
-    .invoice-details .info-group p {
-      font-weight: bold;
-      font-size: 14px; /* Slightly smaller font */
-      color: #333;
-    }
-    .invoice-details .info-group strong {
-      color: #0056b3;
-      font-weight: 800;
-    }
+        .contact-numbers-flex {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #007bff;
+            padding: 5px 0;
+            border-bottom: 1px dashed #ccc;
+        }
+        .contact-numbers-flex span {
+            padding: 0 5px;
+            direction: ltr; /* Force left-to-right direction for numbers */
+            unicode-bidi: isolate; /* Isolate this element from parent's direction */
+        }
 
-    /* Table Styles */
-    table {
-      width: 100%;
-      border-collapse: collapse; /* Collapses borders as requested */
-      margin-bottom: 30px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* Soft shadow for table */
-    }
-    th, td {
-      border: 1px solid #cce0f0; /* Lighter border for clean look */
-      padding: 15px; /* Standard padding for table data */
-      text-align: center;
-    }
-    thead th {
-      background-color: #0056b3; /* Primary blue for header */
-      color: #fff;
-      font-weight: bold;
-      text-align: center;
-      padding: 0; /* No padding for th, as requested */
-      line-height: 2.8; /* Vertically centers text in collapsed header */
-      text-transform: uppercase;
-      font-size: 15px;
-      letter-spacing: 0.5px;
-    }
-    tbody tr:nth-child(even) {
-      background-color: #f8fbfd; /* Very light alternative row color */
-    }
-    tbody td {
-      font-weight: 500;
-      color: #34495e;
-    }
+        .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #e9f5ff;
+            border-right: 4px solid #007bff;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        }
+        .invoice-details .info-group p {
+            font-weight: 700;
+            font-size: 16px;
+            color: #333;
+        }
+        .invoice-details .info-group strong {
+            color: #007bff;
+            font-weight: 800;
+        }
 
-    /* Totals Box */
-    .totals-box {
-      width: 45%; /* Wider box for totals */
-      margin-right: 0;
-      margin-left: auto; /* Aligns to the left in RTL */
-      border: 3px solid #0056b3; /* Bold border */
-      border-radius: 12px; /* More rounded corners */
-      overflow: hidden;
-      margin-bottom: 40px;
-      background: #ffffff;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    .totals-box p {
-      display: flex;
-      justify-content: space-between;
-      padding: 15px 25px;
-      font-weight: bold;
-      border-bottom: 1px solid #e0e6eb; /* Lighter separator */
-      color: #34495e;
-    }
-    .totals-box p:last-child {
-      border-bottom: none;
-      background: #0056b3; /* Striking final total background */
-      color: #fff;
-      font-size: 18px;
-      font-weight: 900; /* Extra bold for total */
-    }
-    .totals-box p strong {
-      color: inherit; /* Inherit color from parent */
-    }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        thead th {
+            background-color: #007bff;
+            color: #fff;
+            font-weight: 700;
+            text-align: center;
+            line-height: 1.8;
+            text-transform: uppercase;
+            font-size: 14px;
+            letter-spacing: .5px;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        tbody td {
+            font-weight: 500;
+            color: #34495e;
+        }
 
-    /* Driver Details (Card) */
-    .driver-details {
-      background: #eaf2f8; /* Matches invoice details background */
-      border-right: 4px solid #0056b3; /* Slightly thinner accent border */
-      padding: 15px 25px; /* Reduced padding */
-      margin-bottom: 50px; /* Reduced margin */
-      font-size: 14px; /* Slightly smaller font */
-      line-height: 1.8; /* Adjusted line height */
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Softer shadow */
-    }
-    .driver-details strong {
-      color: #0056b3;
-      font-weight: 700;
-    }
+        .totals-box {
+            width: 40%;
+            margin-right: 0;
+            margin-left: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,.08);
+        }
+        .totals-box p {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 15px;
+            font-weight: 700;
+            border-bottom: 1px solid #e9ecef;
+            color: #555;
+            font-size: 16px;
+        }
+        .totals-box p:last-child {
+            border-bottom: none;
+            background: #007bff;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 900;
+        }
+        .totals-box p strong {
+            color: inherit;
+        }
 
-    /* Signatures Section */
-    .signatures {
-      display: flex;
-      justify-content: space-around;
-      text-align: center;
-      padding-top: 25px;
-      border-top: 2px dashed #aab7c0; /* Dashed line for subtle separation */
-      margin-top: auto; /* Pushes signatures to the bottom of the container */
-    }
-    .signatures .sig-box {
-      width: 30%; /* Slightly wider signature boxes */
-      padding-top: 15px;
-    }
-    .signatures .sig-box p {
-      font-weight: bold;
-      color: #0056b3;
-      border-top: 1px solid #0056b3; /* Line above name */
-      padding-top: 8px;
-      font-size: 14px;
-    }
+        .driver-details {
+            background: #e9f5ff;
+            border-right: 4px solid #007bff;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.8;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        }
+        .driver-details strong {
+            color: #007bff;
+            font-weight: 700;
+        }
 
-    /* Print adjustments */
-    @media print {
-      body {
-        margin: 0;
-        box-shadow: none;
-        width: auto;
-        height: auto;
-      }
-      .signatures {
-        position: relative;
-        bottom: auto;
-        left: auto;
-        right: auto;
-        margin-top: 40px;
-        page-break-inside: avoid; /* Avoid breaking signatures across pages */
-      }
-      .container {
-        display: block; /* Remove flexbox behavior for print layout */
-      }
-    }
-  </style>
+        .signatures {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            padding-top: 10px;
+            border-top: 1px solid #ccc;
+            margin-top: auto;
+        }
+        .signatures .sig-box {
+            width: 30%;
+            padding-top: 15px;
+        }
+        .signatures .sig-box p {
+            font-weight: 700;
+            color: #555;
+            border-top: 1px solid #555;
+            padding-top: 8px;
+            font-size: 16px;
+        }
+
+        @media print {
+            html, body {
+                height: 100%; /* Ensure A4 height for printing */
+                width: 100%; /* Ensure A4 width for printing */
+                overflow: hidden;
+            }
+            body {
+                margin: 0;
+                box-shadow: none;
+                padding: 10px;
+            }
+            .signatures {
+                position: relative;
+                margin-top: 20px;
+                page-break-before: auto;
+                page-break-inside: avoid;
+            }
+            .container {
+                display: flex;
+                height: 100%;
+            }
+            .main-content {
+                flex-grow: 1;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="main-content">
-      <div class="invoice-header">
-        <div class="logo-container">
-          <img src="${window.location.origin}${logo}" alt="Company Logo" />
-          <div class="contact-info">
-            <span>٠٧٥٠ ٢٤٦ ٦٧٣٩</span>
-            <span>٠٧٧٠ ١٤٧ ١٨٣٨</span>
-            <span>٠٧٧٦ ٦٩١ ١١٩٨</span>
-          </div>
+    <div class="container">
+        <div class="main-content">
+            <div class="invoice-header">
+             <div class="header-section company-info-kurdish">
+                    <h2>كارگەی خوێی سەردەم</h2>
+                    <p>بۆ به‌رهه‌مهێنانی باشترین جۆری خوێی خۆراكی و پیشه‌سازی</p>
+                    <p>ناونیشان / سلێمانی / ناجییه‌ی ته‌كیه‌ / ناوچه‌ی پیشه‌سازی</p>
+                </div>
+                  <div class="header-section logo-center">
+                    <img src="${window.location.origin}${logo}" alt="Company Logo" />
+                </div>
+                <div class="header-section company-info-arabic">
+                    <h1>معمل ملح سردم</h1>
+                    <p>للأنتاج افضل نوعیة الملح لغذاء ولصناعة</p>
+                    <p>الأعنوان / السلیمانیة / ناحیة التكیة / المنطقه‌ الصناعیة</p>
+                </div>
+              
+               
+            </div>
+            <div class="contact-numbers-flex">
+                <span>0770 157 7927</span>
+                <span>0750 157 7927</span>
+                <span>0770 147 1838</span>
+            </div>
+
+            <div class="invoice-details">
+                <div class="info-group">
+                    <p><strong>:ناوی کڕیار</strong> ${invoiceData.buyerName}</p>
+                </div>
+                <div class="info-group">
+                    <p><strong>به‌روار :</strong> ${invoiceData.date}</p>
+                    <p><strong>ژماره‌ی پسووله‌ :</strong> ${invoiceData.invoiceId}</p>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ز</th>
+                        <th>جۆری خوێ</th>
+                        <th>بڕ (تۆن)</th>
+                        <th>نرخی ته‌ن</th>
+                        <th>كۆی گشتی</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsHtml}
+                </tbody>
+            </table>
+
+            <div class="totals-box">
+                <p><span>كۆی گشتی پسووله‌:</span> <strong>${formatNumberForDisplay(totalItemsPrice)} IQD</strong></p>
+                ${invoiceData.oldDebt > 0 ? `<p><span>قه‌رزی گۆن :</span> <strong>${formatNumberForDisplay(oldDebtValue)} IQD</strong></p>` : ''}
+                <p><span>كۆی گشتی:</span> <strong>${formatNumberForDisplay(totalDue)} IQD</strong></p>
+            </div>
+
+            <div class="driver-details">
+                <p><strong>ناوی شۆفێر:</strong> ${invoiceData.truckDriverName}</p>
+                <p><strong>ژماره‌ی شۆفێر:</strong> ${invoiceData.truckDriverPhone}</p>
+                <p><strong>ژماره‌ی بارهه‌ڵگر :</strong> ${invoiceData.truckNumber}</p>
+            </div>
         </div>
-        <div class="company-info">
-          <h1>معمل ملح سردم</h1>
-          <p>الأنتاج افضل نوعیه‌</p>
-          <p>الأعنوان / السلیمانیة / ناحیة التكیة / المنطقه‌ الصناعیة</p>
-          <br>
-          <h2>كارگەی خوێی سەردەم</h2>
-          <p>بۆ به‌رهه‌مهێنانی باشترین جۆری خوێی خۆراكی و پیشه‌سازی</p>
-          <p>ناونیشان / سلێمانی / ناجییه‌ی ته‌كیه‌ / ناوچه‌ی پیشه‌سازی</p>
+        
+        <div class="signatures">
+            <div class="sig-box">
+                <p>به‌رێوبه‌ر / صفاءالدین صالح حمه‌</p>
+            </div>
+            <div class="sig-box">
+                <p>ب.كارگێڕی / سامان ممند شریف</p>
+            </div>
+            <div class="sig-box">
+                <p>وه‌رگر / ${invoiceData.receiverName || 'نيە'}</p>
+            </div>
         </div>
-      </div>
-  
-      <div class="invoice-details">
-        <div class="info-group">
-          <p><strong>:ناوی کڕیار</strong> ${invoiceData.buyerName}</p>
-        </div>
-        <div class="info-group">
-          <p><strong>به‌روار :</strong> ${invoiceData.date}</p>
-          <p><strong>ژماره‌ی پسووله‌ :</strong> ${invoiceData.invoiceId}</p>
-        </div>
-      </div>
-  
-      <table>
-        <thead>
-          <tr>
-            <th>ز</th>
-            <th>جۆری خوێ</th>
-            <th>بڕ (تۆن)</th>
-            <th>نرخی ته‌ن</th>
-            <th>كۆی گشتی</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsHtml}
-        </tbody>
-      </table>
-  
-      <div class="totals-box">
-        <p><span>كۆی گشتی پسووله‌:</span> <strong>${formatNumberForDisplay(totalItemsPrice)} IQD</strong></p>
-        ${invoiceData.oldDebt > 0 ? `<p><span>قه‌رزی گۆن :</span> <strong>${formatNumberForDisplay(oldDebtValue)} IQD</strong></p>` : ''}
-        <p><span>كۆی گشتی:</span> <strong>${formatNumberForDisplay(totalDue)} IQD</strong></p>
-      </div>
-  
-      <div class="driver-details">
-        <p><strong>ناوی شۆفێر:</strong> ${invoiceData.truckDriverName}</p>
-        <p><strong>ژماره‌ی شۆفێر:</strong> ${invoiceData.truckDriverPhone}</p>
-        <p><strong>ژماره‌ی بارهه‌ڵگر :</strong> ${invoiceData.truckNumber}</p>
-      </div>
     </div>
-    
-    <div class="signatures">
-      <div class="sig-box">
-        <p>به‌رێوبه‌ر / ناوی به‌ڕێوبه‌ر</p>
-      </div>
-      <div class="sig-box">
-        <p>ب.كارگێڕی / سامان ممند شریف</p>
-      </div>
-      <div class="sig-box">
-        <p>وه‌رگر / ${invoiceData.receiverName || 'نیه‌'}</p>
-      </div>
-    </div>
-  </div>
 </body>
 </html>
+
 
   `;
 };
@@ -751,25 +763,25 @@ const Sold = () => {
 
         {soldData.length > 0 ? (
           soldData.map(entry => (
-            <div key={entry.id} className="bg-white shadow-xl border border-blue-100 rounded-xl p-4 mb-4 hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-0.5 text-sm">
+            <div key={entry.id} className="bg-white shadow-xl border border-blue-100 rounded-xl p-4 mb-4 hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-0.5 text-base">
               <div dir="rtl" className="flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer pb-2 border-b border-blue-100" onClick={() => toggleExpanded(entry.id)}>
                 <div className="flex-grow">
                   <h2 className="text-lg font-bold text-blue-800 mb-1 flex items-center gap-1">
                     {entry.buyerName}
                   </h2>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-sm text-gray-600">
                     وەسڵ: <span className="font-semibold text-gray-800">{entry.invoiceId}</span> • بەروار: <span className="font-semibold text-gray-800">{entry.date}</span>
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm text-gray-500">
                     شۆفێر: <span className="font-medium">{entry.truckDriverName}</span> (#<span className="font-medium">{entry.truckNumber}</span>, <span className="font-medium">{entry.truckDriverPhone}</span>)
                   </p>
                   {entry.receiverName && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm text-gray-500">
                       وەرگر: <span className="font-medium">{entry.receiverName}</span>
                     </p>
                   )}
                   {entry.oldDebt > 0 && (
-                    <p className="text-xs text-red-500 font-semibold">
+                    <p className="text-sm text-red-500 font-semibold">
                       قەرزی کۆن: {formatNumberForDisplay(entry.oldDebt)} IQD
                     </p>
                   )}
@@ -777,25 +789,25 @@ const Sold = () => {
                 <div className="flex items-center gap-1 mt-2 sm:mt-0">
                   <button
                     onClick={(e) => { e.stopPropagation(); setEditingEntry(entry); setShowEditModal(true); }}
-                    className="flex items-center gap-1 px-2 py-1 rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors text-xs font-semibold"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors text-sm font-semibold"
                   >
                     <Edit size={12} /> دەستکاری
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setDeletingEntryId(entry.id); setShowDeleteConfirmModal(true); }}
-                    className="flex items-center gap-1 px-2 py-1 rounded-md text-red-700 bg-red-50 hover:bg-red-100 transition-colors text-xs font-semibold"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-red-700 bg-red-50 hover:bg-red-100 transition-colors text-sm font-semibold"
                   >
                     <Trash2 size={12} /> سڕینەوە
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleInvoiceAction(entry.id, 'print'); }}
-                    className="flex items-center gap-1 px-2 py-1 rounded-md text-green-700 bg-green-50 hover:bg-green-100 transition-colors text-xs font-semibold"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-green-700 bg-green-50 hover:bg-green-100 transition-colors text-sm font-semibold"
                   >
                     <Printer size={12} /> چاپ
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleInvoiceAction(entry.id, 'download'); }}
-                    className="flex items-center gap-1 px-2 py-1 rounded-md text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors text-xs font-semibold"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors text-sm font-semibold"
                   >
                     <FileDown size={12} /> داگرتن
                   </button>
@@ -807,7 +819,7 @@ const Sold = () => {
                 </div>
               </div>
               {expanded[entry.id] && (
-                <div dir="rtl" className="mt-2 text-xs">
+                <div dir="rtl" className="mt-2 text-sm">
                   <table className="w-full text-right table-auto border-collapse mt-2">
                     <thead>
                       <tr className="bg-blue-100 text-blue-800">
@@ -830,7 +842,7 @@ const Sold = () => {
                       ))}
                     </tbody>
                   </table>
-                  <div className="text-right mt-2 text-sm font-extrabold text-blue-700 bg-blue-100 px-2 py-1 rounded-lg border border-blue-200 shadow-md">
+                  <div className="text-right mt-2 text-base font-extrabold text-blue-700 bg-blue-100 px-2 py-1 rounded-lg border border-blue-200 shadow-md">
                     کۆی گشتی فرۆش: <span className="text-green-800">{formatNumberForDisplay(entry.total)} IQD</span>
                   </div>
                 </div>
@@ -838,7 +850,7 @@ const Sold = () => {
             </div>
           ))
         ) : (
-          <div dir="rtl" className="text-center py-6 text-gray-500 text-sm bg-white rounded-xl shadow-lg border border-gray-200">
+          <div dir="rtl" className="text-center py-6 text-gray-500 text-base bg-white rounded-xl shadow-lg border border-gray-200">
             هیچ تۆمارێکی فرۆش نەدۆزرایەوە بەپێی پێوەرەکانت.
           </div>
         )}

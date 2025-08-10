@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Edit, Trash2, Printer, Download, X, DollarSign, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Printer, X, DollarSign, TrendingUp, TrendingDown, CheckCircle, XCircle } from 'lucide-react';
 import { io } from 'socket.io-client';
+import logo from "./../../../../resources/logo.png"; // Assuming you have a logo for print
 
-const API_BASE_URL = 'http://localhost:5000/api';
-const SOCKET_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://192.168.100.210:5000/api';
+const SOCKET_URL = 'http://192.168.100.210:5000';
 
 const formatNumberForDisplay = (num) => {
   if (num === null || num === undefined || isNaN(num)) return '';
   const parsedNum = parseFloat(num);
-  if (parsedNum % 1 === 0) {
-    return parsedNum.toString();
-  }
-  return parsedNum.toFixed(2);
+  // Use 'en-US' locale for English formatting without trailing .00
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: parsedNum % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2
+  }).format(parsedNum);
 };
 
 const Toast = ({ message, type, onClose }) => {
@@ -91,26 +93,30 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirm
   );
 };
 
-const AddEditTransactionModal = ({ isOpen, onClose, initialData, onSave, type }) => {
+const AddEditTransactionModal = ({ isOpen, onClose, initialData, onSave, type, currentUser }) => {
   const [formData, setFormData] = useState(initialData || {
     title: '',
     price: '',
     date: new Date().toISOString().split('T')[0],
     description: '',
-    type: type
+    type: type,
+    addedBy: currentUser?.username || '' // Initialize with currentUser
   });
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setFormData(initialData || {
+    setFormData(initialData ? {
+      ...initialData
+    } : {
       title: '',
       price: '',
       date: new Date().toISOString().split('T')[0],
       description: '',
-      type: type
+      type: type,
+      addedBy: currentUser?.username || '' // Set for new entries
     });
     setError('');
-  }, [initialData, type]);
+  }, [initialData, type, currentUser]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -121,8 +127,8 @@ const AddEditTransactionModal = ({ isOpen, onClose, initialData, onSave, type })
     e.preventDefault();
     setError('');
 
-    if (!formData.title || !formData.price || !formData.date) {
-      setError('ناونیشان، نرخ، و بەروار پێویستن.');
+    if (!formData.title || !formData.price || !formData.date || !formData.addedBy) {
+      setError('ناونیشان، نرخ، بەروار، و زیادکراوە لەلایەن پێویستن.');
       return;
     }
     if (parseFloat(formData.price) <= 0) {
@@ -200,6 +206,17 @@ const AddEditTransactionModal = ({ isOpen, onClose, initialData, onSave, type })
               rows="3"
             />
           </div>
+          <div>
+            <label htmlFor="addedBy" className="block text-sm font-medium text-gray-700 mb-1">زیادکراوە لەلایەن</label>
+            <input
+              type="text"
+              id="addedBy"
+              name="addedBy"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm bg-gray-100 cursor-not-allowed text-right"
+              value={formData.addedBy}
+              readOnly
+            />
+          </div>
           {error && <p className="text-red-500 text-sm mt-2 text-right">{error}</p>}
           <div className="flex justify-end gap-4 mt-6">
             <button
@@ -222,11 +239,231 @@ const AddEditTransactionModal = ({ isOpen, onClose, initialData, onSave, type })
   );
 };
 
+const generateTransactionHtml = (transactionData) => {
+  return `
+   <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تۆماری ${transactionData.type === 'spend' ? 'خەرجی' : 'داهات'} - ${transactionData.title}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Ubuntu', 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        body {
+            position: relative;
+            padding: 15mm;
+            width: 210mm;
+            height: 297mm;
+            background: #ffffff;
+            direction: rtl;
+            font-size: 11pt;
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            width: 100%;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .header h1 {
+            font-size: 20pt;
+            color: ${transactionData.type === 'spend' ? '#b30000' : '#007000'}; /* Red for spend, green for earning */
+            margin-bottom: 5px;
+        }
+        .header p {
+            font-size: 10pt;
+            color: #555;
+            margin-top: 2px;
+        }
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            font-size: 9pt;
+            color: #0056b3;
+            margin-top: 10px;
+        }
+        .contact-info span {
+            direction: ltr;
+            unicode-bidi: isolate;
+        }
+
+        .details-section {
+            margin-top: 20px;
+            margin-bottom: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            border-top: 1px solid #eee;
+        }
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 10pt;
+        }
+        .details-row span {
+            font-weight: bold;
+            color: #0056b3;
+        }
+        .details-row div {
+            flex: 1;
+            padding: 0 10px;
+        }
+        .details-row .right {
+            text-align: right;
+        }
+        .details-row .left {
+            text-align: left;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #eee;
+            font-size: 10pt;
+        }
+        thead th {
+            background-color: #f0f0f0;
+            color: #333;
+            font-weight: bold;
+        }
+        tbody tr {
+            background-color: #f9f9f9;
+        }
+        tbody tr:last-child td {
+            border-bottom: 1px solid #eee;
+        }
+
+        .price-row td {
+            font-weight: bold;
+            background-color: ${transactionData.type === 'spend' ? '#ffe0e0' : '#e0ffe0'}; /* Light red/green background */
+            padding: 10px;
+            font-size: 12pt;
+            color: ${transactionData.type === 'spend' ? '#b30000' : '#007000'};
+        }
+        .price-row span {
+            color: inherit; /* Inherit color from parent */
+        }
+        .description-section {
+            margin-top: 20px;
+            font-size: 10pt;
+            padding: 10px 0;
+            border-top: 1px solid #eee;
+            color: #555;
+        }
+        .description-section strong {
+            color: #333;
+        }
+
+        @media print {
+            html, body {
+                height: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+            }
+            .container {
+                height: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="header">
+                <h1>${transactionData.type === 'spend' ? 'تۆماری خەرجی' : 'تۆماری داهات'}</h1>
+                <p>معمل ملح سردم - كارگەی خوێی سەردەم</p>
+                <p>بۆ به‌رهه‌مهێنانی باشترین جۆری خوێی خۆراكی و پیشه‌سازی</p>
+                <p>ناونیشان / سلێمانی / ناجییه‌ی ته‌كیه‌ / ناوچه‌ی پیشه‌سازی</p>
+                <div class="contact-info">
+                    <span>0770 157 7927</span>
+                    <span>0750 157 7927</span>
+                    <span>0770 147 1838</span>
+                </div>
+            </div>
+
+            <div class="details-section">
+                <div class="details-row">
+                    <div class="right"><span>ناونیشان:</span> ${transactionData.title}</div>
+                    <div class="left"><span>بەروار:</span> ${transactionData.date}</div>
+                </div>
+                <div class="details-row">
+                    <div class="right"><span>جۆر:</span> ${transactionData.type === 'spend' ? 'خەرجی' : 'داهات'}</div>
+                    <div class="left"><span>زیادکراوە لەلایەن:</span> ${transactionData.addedBy || 'نادیار'}</div>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ناونیشان</th>
+                        <th>نرخ (IQD)</th>
+                        <th>بەروار</th>
+                        <th>وەسف</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>${transactionData.title}</td>
+                        <td style="color: ${transactionData.type === 'spend' ? '#b30000' : '#007000'}; font-weight: bold;">${formatNumberForDisplay(transactionData.price)} IQD</td>
+                        <td>${transactionData.date}</td>
+                        <td>${transactionData.description || 'نییە'}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <table style="margin-top: 20px;">
+                <tbody>
+                    <tr class="price-row">
+                        <td colspan="3" style="text-align: right;">کۆی گشتی ${transactionData.type === 'spend' ? 'خەرجی' : 'داهات'}:</td>
+                        <td style="text-align: center;"><span>${formatNumberForDisplay(transactionData.price)} IQD</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            ${transactionData.description ? `<div class="description-section">
+                <strong>وەسف:</strong> ${transactionData.description}
+            </div>` : ''}
+        </div>
+    </div>
+</body>
+</html>
+  `;
+};
+
+
 const Spend = () => {
   const [data, setData] = useState([]);
   const [search, setSearch] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [currentUser, setCurrentUser] = useState(null); // New state for current user
 
   const [showAddEditModal, setShowAddEditModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
@@ -260,21 +497,32 @@ const Spend = () => {
     };
 
     fetchTransactions();
+
+    // Fetch current user from localStorage
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        setCurrentUser(JSON.parse(user));
+      } catch (e) {
+        console.error("هەڵە لە شیکردنەوەی بەکارهێنەر لە LocalStorage:", e);
+        localStorage.removeItem('user'); // Clear invalid user data
+      }
+    }
   }, []);
 
   useEffect(() => {
     const socket = io(SOCKET_URL);
 
     socket.on('transactions:added', (newEntry) => {
-      setData(prevData => [...prevData, newEntry]);
+      setData(prevData => [...prevData, newEntry].sort((a, b) => new Date(b.date) - new Date(a.date)));
     });
 
     socket.on('transactions:updated', (updatedEntry) => {
-      setData(prevData => prevData.map(item => item.id === updatedEntry.id ? updatedEntry : item));
+      setData(prevData => prevData.map(item => item.id === updatedEntry.id ? updatedEntry : item).sort((a, b) => new Date(b.date) - new Date(a.date)));
     });
 
     socket.on('transactions:deleted', (deletedId) => {
-      setData(prevData => prevData.filter(item => item.id !== deletedId));
+      setData(prevData => prevData.filter(item => item.id !== deletedId).sort((a, b) => new Date(b.date) - new Date(a.date)));
     });
 
     return () => {
@@ -294,6 +542,8 @@ const Spend = () => {
       } else {
         method = 'POST';
         url = `${API_BASE_URL}/transactions`;
+        // Ensure addedBy is set for new entries
+        entryToSave.addedBy = currentUser?.username || 'نادیار';
       }
 
       response = await fetch(url, {
@@ -343,18 +593,35 @@ const Spend = () => {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = (entryId) => {
+    const entry = data.find(e => e.id === entryId);
+    if (!entry) {
+      showToast('تۆمارەکە نەدۆزرایەوە.', 'error');
+      return;
+    }
+    const printHtml = generateTransactionHtml(entry);
 
-  const handleDownload = () => {
-    showToast('تایبەتمەندی داگرتن لەژێر گەشەپێداندایە. تکایە لە ئێستادا بژاردەی چاپکردن بەکاربهێنە.', 'info');
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    iframe.contentWindow.document.open();
+    iframe.contentWindow.document.write(printHtml);
+    iframe.contentWindow.document.close();
+
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 500);
+    };
   };
 
   const filteredData = data.filter(
     (item) =>
       (item.title.toLowerCase().includes(search.toLowerCase()) ||
-      item.description.toLowerCase().includes(search.toLowerCase())) &&
+      item.description.toLowerCase().includes(search.toLowerCase()) ||
+      (item.addedBy && item.addedBy.toLowerCase().includes(search.toLowerCase()))) && // Search by addedBy
       (!filterDate || item.date.startsWith(filterDate)) &&
       (filterType === 'all' || item.type === filterType)
   ).sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -372,7 +639,7 @@ const Spend = () => {
       <div className="flex flex-col md:flex-row flex-wrap gap-4 mb-8 items-center justify-center">
         <input
           type="text"
-          placeholder="گەڕان بەپێی ناونیشان یان وەسف..."
+          placeholder="گەڕان بەپێی ناونیشان، وەسف یان زیادکراوە لەلایەن"
           className="px-5 py-2 border border-gray-300 rounded-xl w-full md:w-80 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm text-right"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -431,6 +698,7 @@ const Spend = () => {
               <th className="px-5 py-3 text-right">بەروار</th>
               <th className="px-5 py-3 text-right">جۆر</th>
               <th className="px-5 py-3 text-right">وەسف</th>
+              <th className="px-5 py-3 text-right">زیادکراوە لەلایەن</th> {/* New column header */}
               <th className="px-5 py-3 text-center">کردارەکان</th>
             </tr>
           </thead>
@@ -454,6 +722,7 @@ const Spend = () => {
                     </span>
                   </td>
                   <td className="px-5 py-3 max-w-xs truncate">{item.description}</td>
+                  <td className="px-5 py-3">{item.addedBy}</td> {/* Display addedBy */}
                   <td className="px-5 py-3 flex gap-3 justify-center">
                     <Edit
                       size={18}
@@ -463,13 +732,9 @@ const Spend = () => {
                     <Printer
                       size={18}
                       className="cursor-pointer text-gray-500 hover:text-purple-600 transition-colors"
-                      onClick={() => handlePrint()}
+                      onClick={() => handlePrint(item.id)}
                     />
-                    <Download
-                      size={18}
-                      className="cursor-pointer text-gray-500 hover:text-green-600 transition-colors"
-                      onClick={() => handleDownload()}
-                    />
+                    {/* Download button removed as per conversation */}
                     <Trash2
                       size={18}
                       className="cursor-pointer text-gray-500 hover:text-red-600 transition-colors"
@@ -480,7 +745,7 @@ const Spend = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="7" className="px-5 py-8 text-center text-gray-500 text-lg">
+                <td colSpan="8" className="px-5 py-8 text-center text-gray-500 text-lg"> {/* Updated colspan */}
                   هیچ تۆمارێک نەدۆزرایەوە. هەوڵبدە گەڕان یان فلتەرەکانت بگۆڕیت.
                 </td>
               </tr>
@@ -495,6 +760,7 @@ const Spend = () => {
         initialData={editingEntry}
         onSave={handleSaveEntry}
         type={modalType}
+        currentUser={currentUser} // Pass currentUser to modal
       />
 
       <ConfirmationModal
@@ -502,7 +768,7 @@ const Spend = () => {
         onClose={() => { setShowDeleteConfirmModal(false); setDeletingEntry(null); }}
         onConfirm={handleDeleteConfirm}
         title="پشتڕاستکردنەوەی سڕینەوە"
-        message={`دڵنیایت دەتەوێت تۆماری ${deletingEntry?.type === 'spend' ? 'خەرجی' : 'داهات'} بۆ "${deletingEntry?.title}" بە نرخی ${formatNumberForDisplay(deletingEntry?.price) || ''} IQD بسڕیتەوە؟ ئەم کردارە ناتوانرێت هەڵبوەشێنرێتەوە.`}
+        message={`دڵنیایت دەتەوێت تۆماری ${deletingEntry?.type === 'spend' ? 'خەرجی' : 'داهات'} بۆ "${deletingEntry?.title}" بە نرخی ${formatNumberForDisplay(deletingEntry?.price) || ''} IQD بسڕیتەوە؟ ئەم کردارە ناتوانرێت هەڵوەشێنرێتەوە.`}
         confirmColor={deletingEntry?.type === 'spend' ? 'bg-red-600' : 'bg-green-600'}
       />
 

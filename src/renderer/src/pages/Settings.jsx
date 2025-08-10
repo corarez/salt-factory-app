@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Power, UserPlus, Save, Lock, Wifi, User, Settings, X, KeyRound, Trash2, Edit, CheckCircle, XCircle } from 'lucide-react';
+import { LogOut, Power, UserPlus, Save, Lock, Wifi, User, Settings, X, KeyRound, Trash2, Edit, CheckCircle, XCircle, ShieldOff } from 'lucide-react';
 import { io } from 'socket.io-client';
 
-const API_BASE_URL = 'http://localhost:5000/api';
-const SOCKET_URL = 'http://localhost:5000';
+const API_BASE_URL = window.electronAPI
+  ? `http://${window.electronAPI.SERVER_HOST}:${window.electronAPI.SERVER_PORT}/api`
+  : 'http://192.168.100.210:5000/api';
+const SOCKET_URL = window.electronAPI
+  ? `http://${window.electronAPI.SERVER_HOST}:${window.electronAPI.SERVER_PORT}`
+  : 'http://192.168.100.210:5000';
 
 const Toast = ({ message, type, onClose }) => {
   if (!message) return null;
@@ -83,13 +87,15 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirm
 };
 
 const AdminEditAddModal = ({ isOpen, onClose, initialAdminData, onSaveAdmin }) => {
-  const [formData, setFormData] = useState(initialAdminData || { username: '', role: 'user' });
+  const [formData, setFormData] = useState(initialAdminData || { fullName: '', username: '', role: 'Viewer', password: '' });
   const [error, setError] = useState('');
 
+  const isAddingNew = !initialAdminData || initialAdminData.id === undefined;
+
   useEffect(() => {
-    setFormData(initialAdminData || { username: '', role: 'user' });
+    setFormData(initialAdminData ? { ...initialAdminData, password: '' } : { fullName: '', username: '', role: 'Viewer', password: '' });
     setError('');
-  }, [initialAdminData]);
+  }, [initialAdminData, isOpen]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -99,10 +105,26 @@ const AdminEditAddModal = ({ isOpen, onClose, initialAdminData, onSaveAdmin }) =
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
+
+    if (!formData.fullName) {
+      setError('ناوی تەواو پێویستە.');
+      return;
+    }
     if (!formData.username) {
       setError('ناوی بەکارهێنەر پێویستە.');
       return;
     }
+
+    if (isAddingNew && !formData.password) {
+      setError('وشەی نهێنی پێویستە بۆ بەکارهێنەری نوێ.');
+      return;
+    }
+    
+    if (isAddingNew && formData.password.length < 6) {
+        setError('وشەی نهێنی دەبێت لانیکەم 6 پیت بێت.');
+        return;
+    }
+
     onSaveAdmin(formData);
     onClose();
   };
@@ -119,9 +141,23 @@ const AdminEditAddModal = ({ isOpen, onClose, initialAdminData, onSaveAdmin }) =
           <X size={24} />
         </button>
         <h2 className="text-3xl font-extrabold text-gray-900 mb-6 text-center">
-          {initialAdminData ? 'دەستکاریکردنی بەکارهێنەر' : 'زیادکردنی بەکارهێنەری نوێ'}
+          {isAddingNew ? 'زیادکردنی بەکارهێنەری نوێ' : 'دەستکاریکردنی بەکارهێنەر'}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">ناوی تەواو</label>
+            <input
+              type="text"
+              id="fullName"
+              name="fullName"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm text-right"
+              value={formData.fullName}
+              onChange={handleChange}
+              placeholder="بۆ نموونە، ئەحمەد محەمەد"
+              required
+              readOnly={!isAddingNew}
+            />
+          </div>
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">ناوی بەکارهێنەر</label>
             <input
@@ -133,9 +169,26 @@ const AdminEditAddModal = ({ isOpen, onClose, initialAdminData, onSaveAdmin }) =
               onChange={handleChange}
               placeholder="بۆ نموونە، ئەحمەد"
               required
-              readOnly={!!initialAdminData}
+              readOnly={!isAddingNew}
             />
           </div>
+
+          {isAddingNew && (
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">وشەی نهێنی</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm text-right"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="وشەی نهێنی"
+                required={isAddingNew}
+              />
+            </div>
+          )}
+
           <div>
             <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">ڕۆڵ</label>
             <select
@@ -145,8 +198,9 @@ const AdminEditAddModal = ({ isOpen, onClose, initialAdminData, onSaveAdmin }) =
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm bg-white text-right"
             >
-              <option value="admin">ئەدمن</option>
-              <option value="user">بەکارهێنەر</option>
+              <option value="Super Admin">سووپەر ئەدمن</option>
+              <option value="Admin">ئەدمن</option>
+              <option value="Viewer">بینەر</option>
             </select>
           </div>
           {error && <p className="text-red-500 text-sm mt-2 text-right">{error}</p>}
@@ -162,7 +216,7 @@ const AdminEditAddModal = ({ isOpen, onClose, initialAdminData, onSaveAdmin }) =
               type="submit"
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
             >
-              {initialAdminData ? 'نوێکردنەوەی بەکارهێنەر' : 'زیادکردنی بەکارهێنەر'}
+              {isAddingNew ? 'زیادکردنی بەکارهێنەر' : 'نوێکردنەوەی بەکارهێنەر'}
             </button>
           </div>
         </form>
@@ -259,6 +313,8 @@ const SettingsPage = () => {
   const [admins, setAdmins] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isAddAdminDisabled, setIsAddAdminDisabled] = useState(false);
+
 
   const [showAdminActionModal, setShowAdminActionModal] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState(null);
@@ -298,7 +354,13 @@ const SettingsPage = () => {
     const user = localStorage.getItem('user');
     if (user) {
       try {
-        setCurrentUser(JSON.parse(user));
+        const parsedUser = JSON.parse(user);
+        if (parsedUser.role === 'admin') {
+          parsedUser.role = 'Admin'; 
+        } else if (parsedUser.role === 'user') {
+            parsedUser.role = 'Viewer';
+        }
+        setCurrentUser(parsedUser);
       } catch (e) {
         console.error("هەڵە لە شیکردنەوەی بەکارهێنەر لە LocalStorage:", e);
         localStorage.removeItem('user');
@@ -318,17 +380,20 @@ const SettingsPage = () => {
   }, []);
 
   useEffect(() => {
+    console.log("Settings API Base URL:", API_BASE_URL);
+    console.log("Settings Socket URL:", SOCKET_URL);
+
     const socket = io(SOCKET_URL);
 
-    socket.on('admin:added', (newAdmin) => {
+    socket.on('admins:added', (newAdmin) => {
       setAdmins(prev => [...prev, newAdmin]);
     });
 
-    socket.on('admin:updated', (updatedAdmin) => {
+    socket.on('admins:updated', (updatedAdmin) => {
       setAdmins(prev => prev.map(admin => admin.id === updatedAdmin.id ? updatedAdmin : admin));
     });
 
-    socket.on('admin:deleted', (deletedId) => {
+    socket.on('admins:deleted', (deletedId) => {
       setAdmins(prev => prev.filter(admin => admin.id !== deletedId));
     });
 
@@ -343,12 +408,16 @@ const SettingsPage = () => {
       let method;
       let url;
 
-      if (editingAdmin) {
-        method = 'PUT';
-        url = `${API_BASE_URL}/admins/${editingAdmin.id}`;
-      } else {
+      const isNewAdmin = !adminToSave.id;
+
+      if (isNewAdmin) {
         method = 'POST';
         url = `${API_BASE_URL}/admins`;
+      } else {
+        method = 'PUT';
+        url = `${API_BASE_URL}/admins/${adminToSave.id}`;
+        const { password, ...dataToSend } = adminToSave;
+        adminToSave = dataToSend;
       }
 
       response = await fetch(url, {
@@ -364,8 +433,7 @@ const SettingsPage = () => {
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
-      showToast(`بەکارهێنەر "${adminToSave.username}" ${editingAdmin ? 'نوێکرایەوە' : 'زیادکرا'} بە سەرکەوتوویی!`, 'success');
+      showToast(`بەکارهێنەر "${adminToSave.username}" ${isNewAdmin ? 'زیادکرا' : 'نوێکرایەوە'} بە سەرکەوتوویی!`, 'success');
 
     } catch (error) {
       console.error("هەڵە لە پاشەکەوتکردنی ئەدمن:", error);
@@ -402,7 +470,7 @@ const SettingsPage = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ password: newPassword }),
+        body: JSON.stringify({ newPassword }),
       });
 
       if (!response.ok) {
@@ -442,9 +510,37 @@ const SettingsPage = () => {
   const handleLogout = () => {
     localStorage.removeItem('user');
     showToast('بە سەرکەوتوویی چوونە دەرەوە.', 'success');
-    // Redirect to login page or refresh
     window.location.reload();
   };
+
+  const handleAddAdminClick = () => {
+    if (isAddAdminDisabled) {
+      showToast('ئەم دوگمەیە ناچالاک کراوە.', 'info');
+    } else {
+      setEditingAdmin(null);
+      setShowAdminActionModal(true);
+    }
+  };
+
+
+  if (!currentUser || currentUser.role !== 'Super Admin') {
+    return (
+      <div dir="rtl" className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-red-400 to-orange-500 p-4 text-white text-center">
+        <ShieldOff size={80} className="mb-6 text-red-100" />
+        <h1 className="text-5xl font-extrabold mb-4 animate-pulse">دەستڕاگەیشتن قەدەغەکرا</h1>
+        <p className="text-xl mb-8">
+          تۆ مافی دەستڕاگەیشتنت بەم پەڕەیە نییە.
+          تەنها بەکارهێنەرانی **سووپەر ئەدمن** دەتوانن سێتینگ ببینن.
+        </p>
+        <button
+          onClick={handleLogout}
+          className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-white text-red-600 hover:bg-gray-100 transition-all duration-300 shadow-lg transform hover:scale-105 font-semibold text-lg"
+        >
+          <LogOut size={20} /> چوونە دەرەوە
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div dir="rtl" className="p-6 bg-gray-50 min-h-screen font-sans antialiased">
@@ -453,7 +549,6 @@ const SettingsPage = () => {
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {/* Connection Status Card */}
         <div className="bg-white rounded-2xl shadow-lg p-6 text-center border-b-4 border-blue-500">
           <div className={`text-5xl mb-4 mx-auto p-3 rounded-full inline-flex items-center justify-center ${isOnline ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
             <Wifi size={48} />
@@ -467,7 +562,6 @@ const SettingsPage = () => {
           </p>
         </div>
 
-        {/* User Management Card */}
         <div className="bg-white rounded-2xl shadow-lg p-6 text-center border-b-4 border-indigo-500">
           <div className="text-5xl mb-4 mx-auto p-3 rounded-full inline-flex items-center justify-center bg-indigo-100 text-indigo-600">
             <User size={48} />
@@ -475,14 +569,14 @@ const SettingsPage = () => {
           <h2 className="text-xl font-semibold text-gray-700 mb-2">بەڕێوەبردنی بەکارهێنەر</h2>
           <p className="text-lg text-gray-600 mb-4">بەکارهێنەرانی ئێستا: {admins.length}</p>
           <button
-            onClick={() => { setEditingAdmin(null); setShowAdminActionModal(true); }}
+            onClick={handleAddAdminClick}
             className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all duration-300 shadow-lg transform hover:scale-105 w-full"
+            disabled={isAddAdminDisabled}
           >
             <UserPlus size={20} /> زیادکردنی بەکارهێنەر
           </button>
         </div>
 
-        {/* Application Control Card */}
         <div className="bg-white rounded-2xl shadow-lg p-6 text-center border-b-4 border-gray-800">
           <div className="text-5xl mb-4 mx-auto p-3 rounded-full inline-flex items-center justify-center bg-gray-200 text-gray-800">
             <Power size={48} />
@@ -506,7 +600,6 @@ const SettingsPage = () => {
         </div>
       </div>
 
-      {/* Admin List Section */}
       <div className="mt-12 bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
         <h2 className="text-3xl font-extrabold text-gray-900 mb-6 text-center flex items-center justify-center gap-2">
           <User size={30} className="text-indigo-600" /> لیستی بەکارهێنەران
@@ -529,9 +622,12 @@ const SettingsPage = () => {
                     <td className="px-5 py-3 font-medium text-gray-800">{admin.username}</td>
                     <td className="px-5 py-3">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        admin.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                        admin.role === 'Super Admin' ? 'bg-purple-100 text-purple-700' :
+                        admin.role === 'Admin' ? 'bg-indigo-100 text-indigo-700' :
+                        'bg-blue-100 text-blue-700'
                       }`}>
-                        {admin.role === 'admin' ? 'ئەدمن' : 'بەکارهێنەر'}
+                        {admin.role === 'Super Admin' ? 'سووپەر ئەدمن' :
+                         admin.role === 'Admin' ? 'ئەدمن' : 'بینەر'}
                       </span>
                     </td>
                     <td className="px-5 py-3 flex gap-3 justify-center">

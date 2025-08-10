@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Lock, LogIn, X, Loader2 } from 'lucide-react';
 
 // Base URL for your backend API
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'http://192.168.100.210:5000/api';
 
 const InfoModal = ({ isOpen, onClose, title, message, type = 'info' }) => {
   if (!isOpen) return null;
@@ -36,7 +36,7 @@ const InfoModal = ({ isOpen, onClose, title, message, type = 'info' }) => {
           onClick={onClose}
           className={`px-6 py-2 ${bgColor} text-white rounded-lg hover:${bgColor.replace('500', '600')} transition-colors shadow-md`}
         >
-          Close
+          داخستن
         </button>
       </div>
     </div>
@@ -71,23 +71,21 @@ const LoginPage = ({ onLoginSuccess }) => {
             const data = await response.json();
 
             if (response.ok) {
-                // Login successful
-                localStorage.setItem('user', JSON.stringify(data.user));
                 if (onLoginSuccess) {
                     onLoginSuccess(data.user);
                 }
             } else {
                 // Login failed (e.g., 401 Unauthorized)
-                setModalTitle('Login Failed');
-                setModalMessage(data.message || 'An unknown error occurred. Please try again.');
+                setModalTitle('چوونەژوورەوە سەرکەوتوو نەبوو');
+                setModalMessage(data.message || 'هەڵەیەکی نەزانراو ڕوویدا. تکایە دووبارە هەوڵبدەرەوە.');
                 setModalType('error');
                 setShowModal(true);
             }
         } catch (error) {
             // Network error or server unreachable
             console.error("Login error:", error);
-            setModalTitle('Login Error');
-            setModalMessage('Could not connect to the server. Please check your internet connection or try again later.');
+            setModalTitle('هەڵەی چوونەژوورەوە');
+            setModalMessage('نەتوانرا پەیوەندی بە سێرڤەرەوە بکرێت. تکایە هێڵی ئینتەرنێتەکەت بپشکنە یان دواتر هەوڵبدەرەوە.');
             setModalType('error');
             setShowModal(true);
         } finally {
@@ -99,13 +97,13 @@ const LoginPage = ({ onLoginSuccess }) => {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-300 to-purple-400 p-4">
             <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-md w-full animate-fadeInScale">
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl font-extrabold text-gray-900 mb-3">Welcome Back!</h1>
-                    <p className="text-gray-600 text-lg">Sign in to continue to your account.</p>
+                    <h1 className="text-4xl font-extrabold text-gray-900 mb-3">بەخێربێیتەوە!</h1>
+                    <p className="text-gray-600 text-lg">بۆ بەردەوامیدان بە هەژمارەکەت، بچۆرە ژوورەوە.</p>
                 </div>
 
                 <form onSubmit={handleLogin} className="space-y-6">
                     <div>
-                        <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">Username or Email</label>
+                        <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">ناوی بەکارهێنەر یان ئیمەیڵ</label>
                         <div className="relative">
                             <span className="absolute inset-y-0 left-0 flex items-center pl-3">
                                 <User size={20} className="text-gray-400" />
@@ -114,7 +112,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                                 type="text"
                                 id="username"
                                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm text-lg"
-                                placeholder="yourusername"
+                                placeholder="ناوی بەکارهێنەرەکەت"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 required
@@ -122,7 +120,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                         </div>
                     </div>
                     <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">وشەی تێپەڕ</label>
                         <div className="relative">
                             <span className="absolute inset-y-0 left-0 flex items-center pl-3">
                                 <Lock size={20} className="text-gray-400" />
@@ -146,11 +144,11 @@ const LoginPage = ({ onLoginSuccess }) => {
                     >
                         {isLoading ? (
                             <>
-                                <Loader2 size={20} className="animate-spin" /> Logging In...
+                                <Loader2 size={20} className="animate-spin" /> لە چوونەژوورەوە...
                             </>
                         ) : (
                             <>
-                                <LogIn size={20} /> Login
+                                <LogIn size={20} /> چوونەژوورەوە
                             </>
                         )}
                     </button>

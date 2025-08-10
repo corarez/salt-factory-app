@@ -3,11 +3,24 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
+// const jwt = require('jsonwebtoken'); // Removed jsonwebtoken
 const http = require('http');
 const { Server } = require('socket.io');
 
+// Removed require('dotenv').config() from server.js
+// It's now handled explicitly in main.js to ensure proper loading order in Electron.
+
 const app = express();
-const PORT = 5000;
+// Rely on process.env.HOST being set by main.js via dotenv
+const HOST = process.env.HOST;
+const PORT = process.env.PORT || 5000; // Use env PORT or default to 5000
+// const JWT_SECRET = process.env.JWT_SECRET; // Removed JWT_SECRET
+
+// Removed JWT_SECRET check
+// if (!JWT_SECRET) {
+//   console.error('Error: JWT_SECRET is not defined. Please set it in your .env file or as an environment variable.');
+//   process.exit(1); // Exit the process if the secret is not set
+// }
 
 const server = http.createServer(app);
 
@@ -25,7 +38,9 @@ const db = new sqlite3.Database('./salt_db.db', (err) => {
   if (err) {
     console.error('Error connecting to database:', err.message);
   } else {
-    console.log('Connected to the SQLite database.');
+    // Log the database file path
+    console.log(`Connected to the SQLite database at: ${db.filename}`);
+    console.log('This file will persist unless manually deleted.');
     db.serialize(() => {
       db.run(`CREATE TABLE IF NOT EXISTS admins (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,13 +56,13 @@ const db = new sqlite3.Database('./salt_db.db', (err) => {
             if (err) {
               console.error("Error checking default admin:", err.message);
             } else if (row.count === 0) {
-              const defaultPassword = '123';
+              const defaultPassword = 'Saman8819';
               bcrypt.hash(defaultPassword, 10, (hashErr, hash) => {
                 if (hashErr) {
                   console.error("Error hashing default password:", hashErr.message);
                 } else {
                   db.run(`INSERT INTO admins (fullName, username, password, role) VALUES (?, ?, ?, ?)`,
-                    ['Default Admin', 'admin', hash, 'Super Admin'],
+                    ['Saman Mamand', 'saman', hash, 'Super Admin'],
                     (insertErr) => {
                       if (insertErr) {
                         console.error("Error inserting default admin:", insertErr.message);
@@ -122,6 +137,29 @@ const handleDbError = (res, err, message) => {
   res.status(500).json({ error: message, details: err.message });
 };
 
+// Removed authenticateToken middleware
+// const authenticateToken = (req, res, next) => {
+//   const authHeader = req.headers['authorization'];
+//   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+//   if (token == null) {
+//     return res.status(401).json({ message: 'Authentication token required.' });
+//   }
+
+//   jwt.verify(token, JWT_SECRET, (err, user) => {
+//     if (err) {
+//       console.error("JWT verification error:", err.message);
+//       return res.status(403).json({ message: 'Invalid or expired token.' });
+//     }
+//     // Check if the user has an admin role
+//     if (!user.role || (user.role !== 'Admin' && user.role !== 'Super Admin')) {
+//       return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+//     }
+//     req.user = user; // Attach user info to the request
+//     next();
+//   });
+// };
+
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   db.get("SELECT * FROM admins WHERE username = ?", [username], (err, admin) => {
@@ -137,6 +175,7 @@ app.post('/api/login', (req, res) => {
         return handleDbError(res, compareErr, "Error comparing passwords.");
       }
       if (isMatch) {
+        // No JWT generation here
         res.json({ message: 'Login successful', user: { id: admin.id, username: admin.username, fullName: admin.fullName, role: admin.role } });
       } else {
         res.status(401).json({ message: 'Invalid username or password.' });
@@ -145,8 +184,28 @@ app.post('/api/login', (req, res) => {
   });
 });
 
+// Removed app.use(authenticateToken) for all protected routes
+// app.use('/api/arrived', authenticateToken);
+// app.use('/api/produced', authenticateToken);
+// app.use('/api/sold', authenticateToken);
+// app.use('/api/transactions', authenticateToken);
+// app.use('/api/admins', authenticateToken);
+
+// GET endpoint for arrived data, now with optional monthly filtering
 app.get('/api/arrived', (req, res) => {
-  db.all("SELECT * FROM arrived", [], (err, rows) => {
+  const { month, year } = req.query; // Get month and year from query parameters
+  let sql = "SELECT * FROM arrived";
+  const params = [];
+
+  if (month && year) {
+    // Ensure month is two digits (e.g., '01' for January)
+    const formattedMonth = String(month).padStart(2, '0');
+    // Filter by year and month using SQLite's strftime function
+    sql += " WHERE strftime('%Y-%m', arrivedDate) = ?";
+    params.push(`${year}-${formattedMonth}`);
+  }
+
+  db.all(sql, params, (err, rows) => {
     if (err) {
       handleDbError(res, err, "Error retrieving arrived data.");
     } else {
@@ -204,8 +263,21 @@ app.delete('/api/arrived/:id', (req, res) => {
   });
 });
 
+// GET endpoint for produced data, now with optional monthly filtering
 app.get('/api/produced', (req, res) => {
-  db.all("SELECT * FROM produced", [], (err, rows) => {
+  const { month, year } = req.query; // Get month and year from query parameters
+  let sql = "SELECT * FROM produced";
+  const params = [];
+
+  if (month && year) {
+    // Ensure month is two digits (e.g., '01' for January)
+    const formattedMonth = String(month).padStart(2, '0');
+    // Filter by year and month using SQLite's strftime function
+    sql += " WHERE strftime('%Y-%m', date) = ?";
+    params.push(`${year}-${formattedMonth}`);
+  }
+
+  db.all(sql, params, (err, rows) => {
     if (err) {
       handleDbError(res, err, "Error retrieving produced data.");
     } else {
@@ -339,27 +411,48 @@ app.delete('/api/sold/:id', (req, res) => {
   });
 });
 
+// Modified endpoint to generate next invoice ID, resetting annually
 app.get('/api/next-invoice-id', (req, res) => {
   const invoiceIdPrefix = 'INV-';
-  db.get("SELECT invoiceId FROM sold ORDER BY id DESC LIMIT 1", [], (err, row) => {
+  db.get("SELECT invoiceId, date FROM sold ORDER BY id DESC LIMIT 1", [], (err, row) => {
     if (err) {
       return handleDbError(res, err, "Error retrieving last invoice ID.");
     }
 
     let nextInvoiceNumber = 1;
-    if (row && row.invoiceId) {
-      const lastInvoiceNumber = parseInt(row.invoiceId.replace(invoiceIdPrefix, ''));
-      if (!isNaN(lastInvoiceNumber)) {
-        nextInvoiceNumber = lastInvoiceNumber + 1;
+    const currentYear = new Date().getFullYear();
+
+    if (row && row.invoiceId && row.date) {
+      const lastInvoiceYear = new Date(row.date).getFullYear(); // Get year from the last invoice date
+      if (lastInvoiceYear === currentYear) {
+        // If it's the same year, increment the last invoice number
+        const lastInvoiceNumber = parseInt(row.invoiceId.replace(invoiceIdPrefix, ''));
+        if (!isNaN(lastInvoiceNumber)) {
+          nextInvoiceNumber = lastInvoiceNumber + 1;
+        }
       }
+      // If lastInvoiceYear is different from currentYear, nextInvoiceNumber remains 1 (reset)
     }
     const nextInvoiceId = `${invoiceIdPrefix}${String(nextInvoiceNumber).padStart(4, '0')}`;
     res.json({ nextInvoiceId });
   });
 });
 
+// GET endpoint for transactions data, now with optional monthly filtering
 app.get('/api/transactions', (req, res) => {
-  db.all("SELECT * FROM transactions", [], (err, rows) => {
+  const { month, year } = req.query; // Get month and year from query parameters
+  let sql = "SELECT * FROM transactions";
+  const params = [];
+
+  if (month && year) {
+    // Ensure month is two digits (e.g., '01' for January)
+    const formattedMonth = String(month).padStart(2, '0');
+    // Filter by year and month using SQLite's strftime function
+    sql += " WHERE strftime('%Y-%m', date) = ?";
+    params.push(`${year}-${formattedMonth}`);
+  }
+
+  db.all(sql, params, (err, rows) => {
     if (err) {
       handleDbError(res, err, "Error retrieving transactions data.");
     } else {
@@ -529,6 +622,7 @@ app.delete('/api/admins/:id', (req, res) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Listen on the specified host and port
+server.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
 });
