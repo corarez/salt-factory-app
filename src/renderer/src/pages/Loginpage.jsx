@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Lock, LogIn, X, Loader2 } from 'lucide-react';
 
 // Base URL for your backend API
-const API_BASE_URL = 'http://192.168.100.210:5000/api';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 const InfoModal = ({ isOpen, onClose, title, message, type = 'info' }) => {
   if (!isOpen) return null;
@@ -75,7 +75,6 @@ const LoginPage = ({ onLoginSuccess }) => {
                     onLoginSuccess(data.user);
                 }
             } else {
-                // Login failed (e.g., 401 Unauthorized)
                 setModalTitle('چوونەژوورەوە سەرکەوتوو نەبوو');
                 setModalMessage(data.message || 'هەڵەیەکی نەزانراو ڕوویدا. تکایە دووبارە هەوڵبدەرەوە.');
                 setModalType('error');

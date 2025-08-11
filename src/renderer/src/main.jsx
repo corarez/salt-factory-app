@@ -1,11 +1,13 @@
-import './assets/main.css'
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { HashRouter } from "react-router-dom";
+import AppContent from "./App";
+import "./assets/main.css";
 
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import App from './App'
-
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-)
+createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <HashRouter>
+      <AppContent />
+    </HashRouter>
+  </React.StrictMode>
+);

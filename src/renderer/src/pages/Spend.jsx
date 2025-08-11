@@ -3,8 +3,9 @@ import { PlusCircle, Edit, Trash2, Printer, X, DollarSign, TrendingUp, TrendingD
 import { io } from 'socket.io-client';
 import logo from "./../../../../resources/logo.png"; // Assuming you have a logo for print
 
-const API_BASE_URL = 'http://192.168.100.210:5000/api';
-const SOCKET_URL = 'http://192.168.100.210:5000';
+const API_BASE_URL = 'http://localhost:5000/api';
+const SOCKET_URL = 'http://localhost:5000/';
+
 
 const formatNumberForDisplay = (num) => {
   if (num === null || num === undefined || isNaN(num)) return '';

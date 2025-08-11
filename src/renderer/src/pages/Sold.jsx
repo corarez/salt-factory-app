@@ -4,8 +4,8 @@ import { io } from 'socket.io-client';
 import logo from "./../../../../resources/logo.png"
 
 
-const API_BASE_URL = 'http://192.168.100.210:5000/api';
-const SOCKET_URL = 'http://192.168.100.210:5000';
+const API_BASE_URL = 'http://localhost:5000/api';
+const SOCKET_URL = 'http://localhost:5000';
 
 const formatNumberForDisplay = (num) => {
   if (num === null || num === undefined || isNaN(num)) return '';
@@ -331,8 +331,8 @@ const generateInvoiceHtml = (invoiceData) => {
             margin-top: 3px;
         }
         .header-section.logo-center img {
-            width: 100px;
-            height: 100px;
+            width: 130px;
+            height: 130px;
             object-fit: contain;
             border: 3px solid #007bff;
             padding: 5px;
@@ -818,35 +818,60 @@ const Sold = () => {
                   )}
                 </div>
               </div>
-              {expanded[entry.id] && (
-                <div dir="rtl" className="mt-2 text-sm">
-                  <table className="w-full text-right table-auto border-collapse mt-2">
-                    <thead>
-                      <tr className="bg-blue-100 text-blue-800">
-                        <th className="p-2 border border-blue-200">ID</th>
-                        <th className="p-2 border border-blue-200">جۆری خوێ</th>
-                        <th className="p-2 border border-blue-200">بڕ (تەن)</th>
-                        <th className="p-2 border border-blue-200">نرخ/تەن</th>
-                        <th className="p-2 border border-blue-200">کۆی گشتی (IQD)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {entry.items.map((item, index) => (
-                        <tr key={index} className="odd:bg-white even:bg-blue-50">
-                          <td className="p-2 border border-blue-200">{index + 1}</td>
-                          <td className="p-2 border border-blue-200">{item.saltType}</td>
-                          <td className="p-2 border border-blue-200">{formatNumberForDisplay(item.quantity)}</td>
-                          <td className="p-2 border border-blue-200">{formatNumberForDisplay(item.pricePerTon)} IQD</td>
-                          <td className="p-2 border border-blue-200">{formatNumberForDisplay((parseFloat(item.quantity) || 0) * (parseFloat(item.pricePerTon) || 0))} IQD</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className="text-right mt-2 text-base font-extrabold text-blue-700 bg-blue-100 px-2 py-1 rounded-lg border border-blue-200 shadow-md">
-                    کۆی گشتی فرۆش: <span className="text-green-800">{formatNumberForDisplay(entry.total)} IQD</span>
-                  </div>
-                </div>
-              )}
+            {entry?.id && expanded[entry.id] && (
+  <div dir="rtl" className="mt-2 text-sm">
+    {Array.isArray(entry?.items) && entry.items.length > 0 ? (
+      <>
+        <table className="w-full text-right table-auto border-collapse mt-2">
+          <thead>
+            <tr className="bg-blue-100 text-blue-800">
+              <th className="p-2 border border-blue-200">ID</th>
+              <th className="p-2 border border-blue-200">جۆری خوێ</th>
+              <th className="p-2 border border-blue-200">بڕ (تەن)</th>
+              <th className="p-2 border border-blue-200">نرخ/تەن</th>
+              <th className="p-2 border border-blue-200">کۆی گشتی (IQD)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(entry?.items ?? []).map((item, index) => {
+              const qty = parseFloat(item?.quantity) || 0
+              const ppt = parseFloat(item?.pricePerTon) || 0
+              return (
+                <tr key={index} className="odd:bg-white even:bg-blue-50">
+                  <td className="p-2 border border-blue-200">{index + 1}</td>
+                  <td className="p-2 border border-blue-200">{item?.saltType ?? '-'}</td>
+                  <td className="p-2 border border-blue-200">{formatNumberForDisplay(qty)}</td>
+                  <td className="p-2 border border-blue-200">{formatNumberForDisplay(ppt)} IQD</td>
+                  <td className="p-2 border border-blue-200">{formatNumberForDisplay(qty * ppt)} IQD</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+
+        {(() => {
+          const items = entry?.items ?? []
+          const calcTotal = items.reduce((sum, it) => {
+            const q = parseFloat(it?.quantity) || 0
+            const p = parseFloat(it?.pricePerTon) || 0
+            return sum + q * p
+          }, 0)
+          const total = typeof entry?.total === 'number' ? entry.total : calcTotal
+          return (
+            <div className="text-right mt-2 text-base font-extrabold text-blue-700 bg-blue-100 px-2 py-1 rounded-lg border border-blue-200 shadow-md">
+              کۆی گشتی فرۆش: <span className="text-green-800">{formatNumberForDisplay(total)} IQD</span>
+            </div>
+          )
+        })()}
+      </>
+    ) : (
+      <div className="mt-2 p-3 rounded-md border border-blue-200 bg-blue-50 text-blue-800">
+        هیچ دانەیەک بۆ ئەم کڕیارە نییە.
+      </div>
+    )}
+  </div>
+)}
+
             </div>
           ))
         ) : (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
+import { Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Arrived from "./pages/Arrived";
 import Produced from "./pages/Produced";
@@ -8,37 +8,33 @@ import Spend from "./pages/Spend";
 import Analytics from "./pages/Analytics";
 import SettingsPage from "./pages/Settings";
 import LoginPage from "./pages/LoginPage";
-import Titlebar from './components/Titlebar';
+import Titlebar from "./components/Titlebar";
 
 const AppContent = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(null); // null = unknown yet
+  const [isLoggedIn, setIsLoggedIn] = useState(null);
   const navigate = useNavigate();
 
-  // Check localStorage on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    setIsLoggedIn(!!storedUser); // true if user exists
+    const storedUser = sessionStorage.getItem("user");
+    setIsLoggedIn(!!storedUser);
   }, []);
 
   const handleLoginSuccess = (userData) => {
-    localStorage.setItem("user", JSON.stringify(userData)); // store user data
+    sessionStorage.setItem("user", JSON.stringify(userData || { ok: true }));
     setIsLoggedIn(true);
     navigate("/");
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("user");
     setIsLoggedIn(false);
     navigate("/login");
   };
 
-  // While checking localStorage, show nothing (avoid redirect flicker)
-  if (isLoggedIn === null) {
-    return null;
-  }
+  if (isLoggedIn === null) return null;
 
   return (
-      <div dir="rtl" className="flex min-h-screen pt-9">
+    <div dir="rtl" className="flex min-h-screen pt-9">
       <Titlebar title="Salt Factory" />
       {isLoggedIn && <Sidebar onLogout={handleLogout} />}
       <div className="flex-1 overflow-y-auto pb-6">
@@ -47,11 +43,7 @@ const AppContent = () => {
             <Route
               path="/login"
               element={
-                isLoggedIn ? (
-                  <Navigate to="/" />
-                ) : (
-                  <LoginPage onLoginSuccess={handleLoginSuccess} />
-                )
+                isLoggedIn ? <Navigate to="/" /> : <LoginPage onLoginSuccess={handleLoginSuccess} />
               }
             />
             <Route path="/" element={isLoggedIn ? <Arrived /> : <Navigate to="/login" />} />
@@ -68,10 +60,4 @@ const AppContent = () => {
   );
 };
 
-export default function App() {
-  return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
-  );
-}
+export default AppContent;

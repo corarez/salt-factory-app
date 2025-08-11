@@ -3,9 +3,8 @@ import { Edit, Trash2, Printer, PlusCircle, X, Eye, CheckCircle, XCircle } from 
 import { io } from 'socket.io-client';
 import logo from "./../../../../resources/logo.png"
 
-const API_BASE_URL = 'http://192.168.100.210:5000/api';
-const SOCKET_URL = 'http://192.168.100.210:5000';
-
+const API_BASE_URL = 'http://localhost:5000/api';
+const SOCKET_URL = 'http://localhost:5000/';
 const formatNumberForDisplay = (num) => {
   if (num === null || num === undefined || isNaN(num)) return '';
   const parsedNum = parseFloat(num);

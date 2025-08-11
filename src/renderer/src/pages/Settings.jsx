@@ -2,12 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { LogOut, Power, UserPlus, Save, Lock, Wifi, User, Settings, X, KeyRound, Trash2, Edit, CheckCircle, XCircle, ShieldOff } from 'lucide-react';
 import { io } from 'socket.io-client';
 
-const API_BASE_URL = window.electronAPI
-  ? `http://${window.electronAPI.SERVER_HOST}:${window.electronAPI.SERVER_PORT}/api`
-  : 'http://192.168.100.210:5000/api';
-const SOCKET_URL = window.electronAPI
-  ? `http://${window.electronAPI.SERVER_HOST}:${window.electronAPI.SERVER_PORT}`
-  : 'http://192.168.100.210:5000';
+const API_BASE_URL = 'http://localhost:5000/api';
+const SOCKET_URL = 'http://localhost:5000/api';
 
 const Toast = ({ message, type, onClose }) => {
   if (!message) return null;
