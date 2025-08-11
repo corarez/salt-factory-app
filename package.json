@@ -25,6 +25,12 @@
   "directories": {
     "buildResources": "resources"
   },
+   "extraResources": [
+    { "from": "src/backend", "to": "backend" }
+  ],
+  "asarUnpack": [
+    "node_modules/sqlite3/**/*"
+  ],
   "files": [
     "out/**/*",
     "resources/**/*"

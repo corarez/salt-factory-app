@@ -5,6 +5,7 @@ const { app, shell, BrowserWindow, ipcMain, session } = require('electron')
 const { join } = require('path')
 const { electronApp, optimizer, is } = require('@electron-toolkit/utils')
 const fs = require('fs')
+const { fork } = require('child_process')
 
 function resolveBackendEntry() {
   const candidatesDev = [
@@ -18,23 +19,43 @@ function resolveBackendEntry() {
 
 function startBackend() {
   const backendEntry = resolveBackendEntry()
+  const PORT = process.env.PORT || '5000'
+  const HOST = process.env.HOST || '127.0.0.1'
+  const dbDir = path.join(app.getPath('userData'), 'data')
+  const dbPath = path.join(dbDir, 'app.db')
+
   try {
-    require(backendEntry)
-    console.log('[main] Backend started from:', backendEntry)
+    fs.mkdirSync(dbDir, { recursive: true })
+  } catch {}
+
+  const env = { ...process.env, PORT, HOST, DB_PATH: dbPath }
+
+  try {
+    if (app.isPackaged) {
+      const cp = fork(backendEntry, [], { env, stdio: 'ignore' })
+      cp.unref()
+      console.log('[main] Backend forked:', backendEntry, 'DB:', dbPath)
+    } else {
+      process.env.DB_PATH = dbPath
+      process.env.PORT = PORT
+      process.env.HOST = HOST
+      require(backendEntry)
+      console.log('[main] Backend required:', backendEntry, 'DB:', dbPath)
+    }
   } catch (e) {
     console.error('[main] Failed to start backend:', e)
   }
 }
 
 function installCSP() {
-  const port = String(5000);
+  const port = String(process.env.PORT || 5000)
   const connectSrc = [
     "'self'",
     `http://127.0.0.1:${port}`,
     `ws://127.0.0.1:${port}`,
     `http://localhost:${port}`,
-    `ws://localhost:${port}`,
-  ].join(' ');
+    `ws://localhost:${port}`
+  ].join(' ')
   const csp = [
     "default-src 'self' 'unsafe-inline' data: https:",
     "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com",
@@ -42,12 +63,12 @@ function installCSP() {
     "img-src 'self' data: https:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
     "font-src 'self' data: https://fonts.gstatic.com"
-  ].join('; ');
+  ].join('; ')
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    const h = details.responseHeaders || {};
-    h['Content-Security-Policy'] = [csp];
-    callback({ responseHeaders: h });
-  });
+    const h = details.responseHeaders || {}
+    h['Content-Security-Policy'] = [csp]
+    callback({ responseHeaders: h })
+  })
 }
 
 function createWindow() {
@@ -103,9 +124,7 @@ app.whenReady().then(() => {
   installCSP()
   startBackend()
   const mainWindow = createWindow()
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show()
-  })
+  mainWindow.once('ready-to-show', () => mainWindow.show())
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
